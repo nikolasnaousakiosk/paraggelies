@@ -146,22 +146,28 @@
   }
 
   // ---------- calculation (γίνεται εδώ· στο Excel γράφονται μόνο τελικοί αριθμοί) ----------
-  function compute(o, meta, P, sCur, sY1, sY2, brandOf, packOf) {
+  // sYs = πωλήσεις ίδιας περιόδου στα προηγούμενα έτη [πέρσι, πρόπερσι, …] (κενό αν δεν ζητήθηκε Μ.Ο.)
+  function compute(o, meta, P, sCur, sYs, brandOf, packOf) {
+    sYs = sYs || [];
     brandOf = brandOf || {}; packOf = packOf || {};
     const vname = (v) => (v == null || v === '' ? '' : (meta.vendors[v] || ('Προμηθευτής #' + v)));
-    const codes = new Set([...Object.keys(sCur), ...Object.keys(sY1), ...Object.keys(sY2)]);
+    const codes = new Set([...Object.keys(sCur), ...sYs.flatMap((m) => Object.keys(m))]);
     const byCd = {}; P.forEach((x) => { byCd[String(x.cd)] = x; });
     const rows = [], skippedNoCost = [], unknown = [];
     for (const cd of codes) {
       const x = byCd[cd];
       if (!x) { if ((sCur[cd] || 0) > 0) unknown.push(cd); continue; }
       const br = brandOf[cd] || '';   // (το φίλτρο κατασκευαστή έχει ήδη γίνει στις αναφορές πωλήσεων)
-      const cur = sCur[cd] || 0, y1 = sY1[cd] || 0, y2 = sY2[cd] || 0;
-      const base = o.avg2y ? (y1 + y2) / 2 : cur;
+      const cur = sCur[cd] || 0;
+      // Μ.Ο. μόνο των ετών που το είδος είχε πωλήσεις στην ίδια περίοδο (π.χ. 3 από τα 5 → διαιρεί με 3)
+      const yv = sYs.map((m) => m[cd] || 0), yN = yv.filter((v) => v > 0).length;
+      const yAvg = yN ? yv.reduce((a, v) => a + v, 0) / yN : 0;
+      const base = o.avg2y ? yAvg : cur;
       if (!(base > o.minSales)) continue;
       const cstk = Number(x.cstk) || 0, dstk = Number(x.dstk) || 0;
       const qRaw = Math.max(0, Math.ceil((o.subStock ? base - cstk : base) - 1e-9));
       let q = qRaw; const notes = [];
+      if (o.avg2y && yN) notes.push('Μ.Ο. ' + yN + (yN === 1 ? ' έτους' : ' ετών') + ' (' + yv.map((v, i) => (o.yearsLbl ? o.yearsLbl[i] : 'έτος -' + (i + 1)) + ': ' + Math.round(v * 100) / 100).join(', ') + ').');
       if (!o.overDesired) {
         if (dstk > 0) q = Math.min(qRaw, Math.max(0, Math.ceil(dstk - cstk - 1e-9)));
         else notes.push('Χωρίς επιθυμητό απόθεμα — δεν εφαρμόστηκε όριο.');
@@ -215,7 +221,7 @@
       const mnet = main ? r4(main.net) : (mainCost > 0 ? r4(mainCost) : null);
       rows.push({
         cd, scl: (x.sCdList || []).map((s) => [String(s.vid), s.code || '']),
-        bcs: [...new Set([...(x.bCdList || []).map((b) => b.bCd), x.bCd || ''].filter((b) => /^\d{8,14}$/.test(String(b))))], pid: x.pid ? String(x.pid).toLowerCase() : '', pk: pk || '', boxes, qPre, nm: String(x.nm || '').trim(), br, cur, y1, y2, base, cstk, dstk, q, vat,
+        bcs: [...new Set([...(x.bCdList || []).map((b) => b.bCd), x.bCd || ''].filter((b) => /^\d{8,14}$/.test(String(b))))], pid: x.pid ? String(x.pid).toLowerCase() : '', pk: pk || '', boxes, qPre, nm: String(x.nm || '').trim(), br, cur, yAvg, yN, base, cstk, dstk, q, vat,
         vid: String(pick.vid), vn: vname(pick.vid), code: pick.code || (x.sCdList || []).find((s) => String(s.vid) === String(pick.vid))?.code || '',
         cost: pick.cost, disc: pick.disc / 100, net, val, gross,
         mvn: vname(mainVid), mnet, save: mnet == null ? null : r2((mnet - net) * q), note: notes.join(' ')
@@ -263,13 +269,14 @@
       };
       ws.headerFooter = { oddFooter: '&L&8' + ws.name + '&R&8Σελίδα &P από &N' };
     };
-    const qtyRule = o.subStock ? 'Ποσότητα = πωλήσεις − τρέχον απόθεμα (στρογγυλοποίηση προς τα πάνω)' : 'Ποσότητα = πωλήσεις περιόδου (χωρίς αφαίρεση αποθέματος)';
+    const baseTxt = o.avg2y ? 'Μ.Ο. πωλήσεων ίδιας περιόδου στα προηγούμενα έτη' : 'πωλήσεις περιόδου';
+    const qtyRule = o.subStock ? `Ποσότητα = ${baseTxt} − τρέχον απόθεμα (στρογγυλοποίηση προς τα πάνω)` : `Ποσότητα = ${baseTxt} (χωρίς αφαίρεση αποθέματος, στρογγυλοποίηση προς τα πάνω)`;
     const printTxt = { summary: 'ΣΥΝΟΨΗ (φύλλο Σύνοψη)', all: 'ΣΥΝΟΛΙΚΗ (φύλλο Δεδομένα)', vendors: 'ΠΡΟΜΗΘΕΥΤΕΣ (ένα φύλλο ανά προμηθευτή)' };
     const settingsTxt = [
       ['Κατάστημα', meta.active.name],
       ['Περίοδος πωλήσεων', `${isoToGr(o.from)} – ${isoToGr(o.to)}`],
       ['Αφαίρεση τρέχοντος αποθέματος', o.subStock ? 'ΝΑΙ' : 'ΟΧΙ (ποσότητα = πωλήσεις)'],
-      ['Μ.Ο. πωλήσεων 2 τελευταίων ετών', o.avg2y ? `ΝΑΙ — (${periods.y1} + ${periods.y2}) / 2` : 'ΟΧΙ'],
+      ['Μ.Ο. πωλήσεων ίδιας περιόδου (έως 5 προηγούμενα έτη)', o.avg2y ? `ΝΑΙ — ${periods.yrs.join(' · ')} · διαιρείται με όσα έτη είχε πωλήσεις το είδος` : 'ΟΧΙ'],
       ['Φθηνότερος προμηθευτής', o.cheapest ? 'ΝΑΙ' : (o.vendor ? 'ΟΧΙ — είδη με δηλωμένο τον προμηθευτή: ' + (meta.vendors[o.vendor] || o.vendor) : 'ΟΧΙ (κύριος προμηθευτής κάθε είδους)')],
       ['Παραγγελία μόνο αν πωλήσεις >', `${o.minSales} τεμ.`],
       ['Υπέρβαση επιθυμητού αποθέματος', o.overDesired ? 'ΝΑΙ' : 'ΟΧΙ (τρέχον + παραγγελία ≤ επιθυμητό)'],
@@ -294,7 +301,7 @@
     dt.getCell('A3').value = stampTxt;
     dt.getCell('A3').font = { name: F, size: 9, color: { argb: 'FF595959' } };
     header(dt, 4, ['Κωδ. προμηθευτή', 'Είδος', 'Ποσότητα παραγγελίας', 'Σύνολο με ΦΠΑ', 'Προμηθευτής', 'Κωδ. SimplyPOS',
-      `Πωλήσεις ${periods.cur}`, `Πωλήσεις ${periods.y1}`, `Πωλήσεις ${periods.y2}`, 'Βάση (τεμ.)',
+      `Πωλήσεις ${periods.cur}`, 'Μ.Ο. ίδιας περιόδου προηγ. ετών', 'Έτη με πωλήσεις (από 5)', 'Βάση (τεμ.)',
       'Τρέχον απόθεμα', 'Επιθυμητό απόθεμα', 'Τιμή καταλόγου', 'Έκπτωση', 'Καθαρό κόστος', 'Καθαρή αξία', 'ΦΠΑ',
       'Κύριος προμηθευτής', 'Καθαρό κόστος κύριου', 'Εξοικονόμηση έναντι κύριου', 'Σημείωση', 'Κατασκευαστής', 'Α/Α (φίλτρο)', 'Κλειδί (φίλτρο)',
       'Τεμ. ανά κιβώτιο', 'Κιβώτια', 'Ποσότητα πριν τη στρογγυλοποίηση'],
@@ -303,12 +310,12 @@
     const BLACK = { name: F }, HELP = { name: F, size: 8, color: { argb: 'FF808080' } };
     res.rows.forEach((r, i) => {
       const n = S + i;
-      const vals = [r.code, r.nm, r.q, r.gross, r.vn, r.cd, r.cur, r.y1, r.y2, r4(r.base), r.cstk, r.dstk, r4(r.cost), r.disc, r.net,
+      const vals = [r.code, r.nm, r.q, r.gross, r.vn, r.cd, r.cur, o.avg2y ? r4(r.yAvg) : '', o.avg2y ? r.yN : '', r4(r.base), r.cstk, r.dstk, r4(r.cost), r.disc, r.net,
         r.val, r.vat, r.mvn, r.mnet == null ? '' : r.mnet, r.save == null ? '' : r.save, r.note, r.br || ''];
       const row = dt.getRow(n);
       vals.forEach((v, j) => { const c = row.getCell(j + 1); c.value = v; c.border = border; c.font = BLACK; });
       const qc = row.getCell(3); fillGrey(qc); qc.font = { name: F, bold: true };
-      [[3, QTY], [4, EUR], [7, QTY], [8, QTY], [9, QTY], [10, '#,##0.0'], [11, QTY], [12, QTY], [13, EUR4], [14, PCT], [15, EUR4], [16, EUR], [17, PCT], [19, EUR4], [20, EUR]]
+      [[3, QTY], [4, EUR], [7, QTY], [8, '#,##0.0'], [9, QTY], [10, '#,##0.0'], [11, QTY], [12, QTY], [13, EUR4], [14, PCT], [15, EUR4], [16, EUR], [17, PCT], [19, EUR4], [20, EUR]]
         .forEach(([j, f]) => { row.getCell(j).numFmt = f; });
       const nc = row.getCell(21); nc.alignment = { wrapText: true, vertical: 'top' };
       if (r.note) nc.font = { name: F, size: 9, color: { argb: 'FFC00000' } };
@@ -506,8 +513,8 @@
       <div class="fld"><span class="lbl"><span class="num">4</span>Παραγγελία μόνο αν οι πωλήσεις ξεπερνούν (τεμ.)</span>
         <input type="number" id="spo-min" min="0" step="1" value="${saved.minSales ?? 0}">
         <div class="hint">0 = όλα τα είδη που πουλήθηκαν.</div></div>
-      <div class="fld"><span class="lbl"><span class="num">5</span>Μ.Ο. πωλήσεων 2 τελευταίων ετών</span>${seg('avg2y', saved.avg2y ?? false)}
-        <div class="hint" id="spo-avg-hint">ΝΑΙ: βάση = μέσος όρος πωλήσεων των ίδιων ημερομηνιών πέρσι και πρόπερσι.</div></div>
+      <div class="fld"><span class="lbl"><span class="num">5</span>Μ.Ο. πωλήσεων ίδιας περιόδου — έως 5 προηγούμενα έτη</span>${seg('avg2y', saved.avg2y ?? false)}
+        <div class="hint" id="spo-avg-hint">ΝΑΙ: βάση = μέσος όρος πωλήσεων των ίδιων ημερομηνιών στα 5 προηγούμενα έτη. Διαιρείται μόνο με τα έτη που το είδος είχε πωλήσεις (π.χ. πωλήσεις σε 3 έτη → Μ.Ο. 3 ετών).</div></div>
       <div class="fld"><span class="lbl"><span class="num">6</span>Υπέρβαση επιθυμητού αποθέματος</span>${seg('overDesired', saved.overDesired ?? true)}
         <div class="hint">ΟΧΙ: η παραγγελία κόβεται ώστε τρέχον + παραγγελία ≤ επιθυμητό απόθεμα.</div></div>
       <div class="fld"><span class="lbl">Προμηθευτής (προαιρετικό)</span><select id="spo-vendor"><option value="">Όλοι οι προμηθευτές</option></select>
@@ -578,27 +585,30 @@
 
   async function run(o, download) {
     if (!o.from || !o.to || o.from > o.to) throw new Error('Ελέγξτε τις ημερομηνίες (από ≤ έως).');
-    const y1 = [isoShiftYear(o.from, -1), isoShiftYear(o.to, -1)], y2 = [isoShiftYear(o.from, -2), isoShiftYear(o.to, -2)];
-    const periods = { cur: `${isoToGr(o.from)}–${isoToGr(o.to)}`, y1: `${isoToGr(y1[0])}–${isoToGr(y1[1])}`, y2: `${isoToGr(y2[0])}–${isoToGr(y2[1])}` };
+    const NY = 5;   // Μ.Ο.: έως 5 προηγούμενα έτη
+    const yrs = Array.from({ length: NY }, (_, i) => [isoShiftYear(o.from, -(i + 1)), isoShiftYear(o.to, -(i + 1))]);
+    const periods = { cur: `${isoToGr(o.from)}–${isoToGr(o.to)}`, yrs: yrs.map((y) => `${isoToGr(y[0])}–${isoToGr(y[1])}`) };
+    o.yearsLbl = yrs.map((y) => y[0].slice(0, 4) === y[1].slice(0, 4) ? y[0].slice(0, 4) : y[0].slice(0, 4) + '/' + y[1].slice(2, 4));
     const bid = o.brand || '';   // id κατασκευαστή
-    const [P, sCur, sY1, sY2, bIds] = await Promise.all([
+    const [P, sCur, bIds, ...sYs] = await Promise.all([
       purchaseProducts(meta.active.id), salesByCode(o.from, o.to, meta.active.id),
-      salesByCode(y1[0], y1[1], meta.active.id), salesByCode(y2[0], y2[1], meta.active.id),
-      bid ? brandProductIds(bid) : Promise.resolve(null)
+      bid ? brandProductIds(bid) : Promise.resolve(null),
+      ...(o.avg2y ? yrs.map((y) => salesByCode(y[0], y[1], meta.active.id)) : [])
     ]);
     // κατασκευαστής ανά είδος: χωρίς φίλτρο = αυτός που δείχνει η αναφορά· με φίλτρο = ο επιλεγμένος
-    const brandOf = Object.assign({}, sY2.b, sY1.b, sCur.b);
+    const brandOf = Object.assign({}, ...sYs.slice().reverse().map((s) => s.b), sCur.b);
     if (bid) {
       const allowed = new Set(P.filter((x) => x.pid && bIds.has(String(x.pid).toLowerCase())).map((x) => String(x.cd)));
-      [sCur, sY1, sY2].forEach((s) => Object.keys(s.q).forEach((k) => { if (!allowed.has(k)) delete s.q[k]; }));
+      [sCur, ...sYs].forEach((s) => Object.keys(s.q).forEach((k) => { if (!allowed.has(k)) delete s.q[k]; }));
       allowed.forEach((k) => { brandOf[k] = meta.brandName[bid]; });
     }
-    let res = compute(o, meta, P, sCur.q, sY1.q, sY2.q, brandOf);
+    const sYq = sYs.map((s) => s.q);
+    let res = compute(o, meta, P, sCur.q, sYq, brandOf);
     if (o.boxRound && res.rows.length) {
       const pids = [...new Set(res.rows.map((r) => r.pid).filter(Boolean))];
       msg(`Διαβάζω «Ποσότητα» κιβωτίου για ${pids.length} είδη…`);
       const packOf = await packQuantities(pids, (d, t) => msg(`Διαβάζω «Ποσότητα» κιβωτίου… ${d} / ${t}`));
-      res = compute(o, meta, P, sCur.q, sY1.q, sY2.q, brandOf, packOf);
+      res = compute(o, meta, P, sCur.q, sYq, brandOf, packOf);
       res.packCount = Object.keys(packOf).length;
     }
     const wb = await buildExcel(o, meta, res, periods);
