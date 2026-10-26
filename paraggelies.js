@@ -14,12 +14,14 @@
   // Προμηθευτές με site: η παραγγελία πάει στο καλάθι του site (ποτέ δεν στέλνεται αυτόματα)
   const SEND = {
     ragousis: { vid: '13473', label: 'ΡΑΓΚΟΥΣΗΣ', url: 'https://ragousiscava.it-support.gr/cart' },
-    mmm: { vid: '9941', label: 'Mmmgroup', url: 'https://www.mmmgroup.gr/' }
+    mmm: { vid: '9941', label: 'Mmmgroup', url: 'https://www.mmmgroup.gr/' },
+    mas: { vid: '13164', label: 'ΜΑΣΟΥΤΗΣ', url: 'https://expressapp.masoutis.gr/home' }
   };
   if (/ragousiscava\./i.test(location.hostname)) { await supplierModule('ragousis'); return; }
   if (/(^|\.)mmmgroup\.gr$/i.test(location.hostname)) { await supplierModule('mmm'); return; }
+  if (/^expressapp\.masoutis\.gr$/i.test(location.hostname)) { await supplierModule('mas'); return; }
   if (!/simplypos\.com$/i.test(location.hostname)) {
-    alert('Ανοίξτε πρώτα το app.simplypos.com (ή το site του ΡΑΓΚΟΥΣΗ / της Mmmgroup) συνδεδεμένοι και πατήστε ξανά τον σελιδοδείκτη «Παραγγελίες».');
+    alert('Ανοίξτε πρώτα το app.simplypos.com (ή το site του προμηθευτή) συνδεδεμένοι και πατήστε ξανά τον σελιδοδείκτη «Παραγγελίες».');
     return;
   }
   const existing = document.getElementById(PID);
@@ -480,7 +482,7 @@
   #${PID} .big{font-size:15px;font-weight:bold}
   #${PID} .quick{background:#f0f7f1;border:1px solid #cfe5d3;border-radius:10px;padding:10px;margin-bottom:12px}
   #${PID} .qb{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
-  #${PID} .qb button{flex:1 1 30%;padding:12px 6px;border:0;border-radius:10px;background:#2e7d32;color:#fff;font-weight:bold;font-size:14px;cursor:pointer}
+  #${PID} .qb button{flex:1 1 45%;padding:12px 6px;border:0;border-radius:10px;background:#2e7d32;color:#fff;font-weight:bold;font-size:14px;cursor:pointer}
   #${PID} .qb button[data-q=excel]{background:#1F4E78}
   #${PID} .qb button:disabled{background:#9aa5b1;cursor:wait}
   #${PID} details summary{cursor:pointer;font-weight:bold;padding:8px 0;color:#1F4E78}
@@ -497,7 +499,7 @@
     <div class="bd">
       <div class="st" id="spo-store">Φόρτωση στοιχείων SimplyPOS…</div>
       <div class="quick"><div class="lbl">⚡ Γρήγορη παραγγελία — πωλήσεις τελευταίων 7 ημερών</div>
-        <div class="qb"><button type="button" data-q="ragousis" disabled>🛒 ΡΑΓΚΟΥΣΗΣ</button><button type="button" data-q="mmm" disabled>🛒 Mmmgroup</button>
+        <div class="qb"><button type="button" data-q="ragousis" disabled>🛒 ΡΑΓΚΟΥΣΗΣ</button><button type="button" data-q="mmm" disabled>🛒 Mmmgroup</button><button type="button" data-q="mas" disabled>🛒 ΜΑΣΟΥΤΗΣ</button>
         <button type="button" data-q="excel" disabled>📄 Μόνο Excel</button></div>
         <div class="hint">Ένα πάτημα: φτιάχνει το Excel και ανοίγει το site του προμηθευτή. Εκεί πατάτε <b>μία φορά</b> τον σελιδοδείκτη και η παραγγελία μπαίνει στο καλάθι. «Μόνο Excel» = όλοι οι προμηθευτές.</div></div>
       <details id="spo-adv"><summary>⚙️ Ρυθμίσεις (για προχωρημένους)</summary>
@@ -527,7 +529,7 @@
       <div class="fld"><span class="lbl"><span class="num">8</span>Στρογγυλοποίηση κιβωτίων</span>${seg('boxRound', saved.boxRound ?? false)}
         <div class="hint">ΝΑΙ: η ποσότητα πάει στο πλησιέστερο κιβώτιο (τουλάχιστον 1) με βάση το πεδίο «Ποσότητα» στις Πληροφορίες του είδους. Είδη χωρίς «Ποσότητα» μένουν ως έχουν.</div></div>
       <div class="fld"><span class="lbl"><span class="num">9</span>Καταχώρηση παραγγελίας</span><select id="spo-send">
-          <option value="">ΟΧΙ — μόνο Excel</option><option value="ragousis">ΡΑΓΚΟΥΣΗΣ — καλάθι στο site</option><option value="mmm">Mmmgroup — καλάθι στο site</option></select>
+          <option value="">ΟΧΙ — μόνο Excel</option><option value="ragousis">ΡΑΓΚΟΥΣΗΣ — καλάθι στο site</option><option value="mmm">Mmmgroup — καλάθι στο site</option><option value="mas">ΜΑΣΟΥΤΗΣ — καλάθι στο site</option></select>
         <div class="hint">Μετά το Excel πατήστε «Άνοιγμα …» και στο site του προμηθευτή πατήστε ξανά αυτόν τον σελιδοδείκτη. Μπαίνουν στο καλάθι όλα τα είδη του Excel· την αποστολή την κάνετε εσείς.</div></div>
       <div class="fld"><span class="lbl">Κατασκευαστής (προαιρετικό)</span><select id="spo-brand"><option value="">Όλοι οι κατασκευαστές</option></select>
         <div class="hint">Μόνο είδη αυτού του κατασκευαστή (όπως είναι δηλωμένος στο είδος στο SimplyPOS).</div></div>
@@ -658,7 +660,9 @@
         const payload = { v: 2, to: o.send, store: meta.active.name, period: `${isoToGr(o.from)}–${isoToGr(o.to)}`,
           rows: res.rows.map((r) => [r.cd, r.nm, r.q, r.pk || 0, r.boxes == null ? 0 : r.boxes,
             ((r.scl || []).find((c) => c[0] === sd.vid) || [])[1] || '', (r.bcs || []).join(',')]) };
-        const url = sd.url + '#spo=' + encodeURIComponent(JSON.stringify(payload));
+        // base64url: μόνο γράμματα/αριθμοί/-/_ ώστε κανένα site να μην «χαλάει» τον σύνδεσμο
+        const b64u = btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+        const url = sd.url + '#spo=' + b64u;
         $id('spo-msg').insertAdjacentHTML('beforeend', `<div style="margin-top:10px;padding:10px;border-radius:8px;background:#e8f5e9">
           <b>Καταχώρηση στον/στην ${esc(sd.label)}:</b> ${res.rows.length} είδη.<br>
           <a href="${url}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;padding:8px 12px;background:#2e7d32;color:#fff;border-radius:8px;font-weight:bold;text-decoration:none">Άνοιγμα ${esc(sd.label)} ›</a>
@@ -675,7 +679,7 @@
 
 
   // =====================================================================
-  //  Site προμηθευτή (ΡΑΓΚΟΥΣΗΣ / Mmmgroup): η παραγγελία μπαίνει ΜΟΝΟ στο καλάθι.
+  //  Site προμηθευτή (ΡΑΓΚΟΥΣΗΣ / Mmmgroup / ΜΑΣΟΥΤΗΣ): η παραγγελία μπαίνει ΜΟΝΟ στο καλάθι.
   //  Την αποστολή της παραγγελίας την κάνει πάντα ο χρήστης από το site.
   // =====================================================================
   async function supplierModule(which) {
@@ -689,7 +693,70 @@
     const packOfName = (n) => { const m = String(n).match(/(\d+)\s*[*xXΧχ×]\s*(\d+)\s*(ml|lt|l|gr|g|cl|cc)?/i); if (!m) return 0; return m[3] ? +m[1] : (+m[1]) * (+m[2]); };
 
     // ---------------- προσαρμογή ανά site ----------------
-    const A = which === 'mmm' ? {
+    // ΜΑΣΟΥΤΗΣ Cash&Carry (expressapp.masoutis.gr): χωρίς πλήρη κατάλογο — αναζήτηση ανά είδος (barcode / κωδικός / όνομα)
+    const MAS = {
+      title: 'ΜΑΣΟΥΤΗ',
+      builtin: {},
+      loggedIn: () => !!localStorage.getItem('token'),
+      _c: null, _H: null,
+      async creds() {
+        if (this._c) return;
+        const c = await fetch('/api/auth/GetCreds/', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + localStorage.getItem('token') }, body: '{}' }).then((r) => r.json());
+        if (!c || !c.IfServiceOk) throw new Error('Δεν έγινε σύνδεση με το site του Μασούτη. Συνδεθείτε ξανά και πατήστε ξανά τον σελιδοδείκτη.');
+        this._c = c; this._H = { 'Content-Type': 'application/json', Key: c.Key, Uid: c.Uid, Usl: c.Usl };
+      },
+      async post(path, body) { await this.creds(); const r = await fetch('/api/WebOrders/' + path, { method: 'POST', headers: this._H, body: JSON.stringify(body) }); if (!r.ok) throw new Error('Σφάλμα ' + r.status + ' (' + path + ')'); return r.json(); },
+      map(x) { const bcs = {}; if (x.Barcode) bcs[String(x.Barcode)] = 1;
+        return { key: x.Itemcode, sku: String(x.Itemcode), name: String(x.ItemDescr || ''), unit: String(x.MI1MME || 'τεμ').toUpperCase(), price: Number(x.UnitPrice) || 0,
+          inStock: true, bcs, raw: x }; },
+      async search(q) { const j = await this.post('GetItemList/', { CustomerToken: this._c ? this._c.Token : (await this.creds(), this._c.Token), SortId: 0, IfHomePage: false, IfPromo: 0, Category: '', SearchText: q });
+        return (j.ItemList || []).map((x) => this.map(x)); },
+      async load(rows, progress) {
+        await this.creds();
+        const found = {}; let i = 0, done = 0;
+        const words = (n) => String(n || '').replace(/[^0-9A-Za-zΑ-Ωα-ωΆ-ώ ]+/g, ' ').split(/\s+/).filter((w) => w.length >= 3 && !/^\d+$/.test(w)).slice(0, 3).join(' ');
+        const worker = async () => {
+          while (i < rows.length) {
+            const a = rows[i++]; const bcs = String(a[6] || '').split(',').filter(Boolean), rk = String(a[5] || '');
+            let hit = false;
+            for (const q of [...new Set([...bcs, rk].filter(Boolean))]) {
+              const l = await this.search(q).catch(() => []);
+              l.forEach((p) => { found[p.sku] = p; });
+              if (l.some((p) => bcs.includes(Object.keys(p.bcs)[0]) || p.sku === rk)) { hit = true; break; }
+            }
+            if (!hit && words(a[1])) (await this.search(words(a[1])).catch(() => [])).slice(0, 12).forEach((p) => { found[p.sku] = p; });
+            done++; if (progress) progress(done, rows.length);
+          }
+        };
+        await Promise.all(Array.from({ length: 6 }, worker));
+        return Object.values(found);
+      },
+      qty(row, p, bcMul) {
+        const x = p.raw || {}, step = Number(x.OrderQty) || 1, max = Number(x.MaxQty) || 9999;
+        let q = (Number(row.q) || 0) * (bcMul || 1);
+        // Το «τεμ» του Μασούτη μπορεί να είναι συσκευασία (π.χ. «12X500ML»). Αν το barcode δεν είναι το ίδιο με του SimplyPOS
+        // και το όνομα στο site δείχνει συσκευασία που δεν έχει το είδος στο SimplyPOS → τεμάχια / συσκευασία.
+        const sameBc = (row.bcs || []).includes(String(x.Barcode || ''));
+        const pkSite = packOfName(p.name), pkPos = packOfName(row.nm);
+        if (!sameBc && pkSite > 1 && pkSite !== pkPos) q = Math.max(1, Math.round(q / pkSite));
+        return Math.min(max, Math.max(step, Math.round(q / step) * step));
+      },
+      async addToCart(items, empty) {
+        const T = () => this._c.Token;
+        if (empty) await this.post('ClearBasket', { CustomerToken: T(), CustomerId: '', CustomerPin: '', CustomerMobile: '', IfMobile: false });
+        const cur = {}; if (!empty) { const b = await this.post('SyncBasket/', { CustomerToken: T() }); (b.Details || []).forEach((d) => { cur[d.Itemcode] = Number(d.UserQty) || 0; }); }
+        const fails = [];
+        for (const { p, qty } of items) {
+          const x = p.raw, q = (cur[x.Itemcode] || 0) + qty;
+          const it = { Itemcode: x.Itemcode, UserQty: q, PosPrice: Math.round(x.UnitPrice * q * 100) / 100, OrderQty: x.OrderQty, ItemDescr: x.ItemDescr, Image: x.Image, UnitPrice: x.UnitPrice };
+          const u = await this.post('UpdateBasket/', { ServiceResponse: T(), Item: it }).catch((e) => ({ IfServiceOk: false, ServiceResponse: e.message }));
+          if (!u.IfServiceOk) fails.push(p.name + (u.ServiceResponse ? ' (' + u.ServiceResponse + ')' : ''));
+        }
+        const b = await this.post('SyncBasket/', { CustomerToken: T() });
+        return { lines: Number(b.BasketCount) || (b.Details || []).length, total: Number(b.BasketAmount) || 0, net: false, fails, reload: true };
+      }
+    };
+    const A = which === 'mas' ? MAS : which === 'mmm' ? {
       title: 'Mmmgroup',
       // Αντιστοιχίσεις που έχουν επιβεβαιωθεί (Κωδ. SimplyPOS → κωδικός είδους στο site)
       builtin: {},
@@ -767,8 +834,10 @@
 
     // ---------------- παραγγελία από το κουμπί του SimplyPOS ----------------
     let order = null, fresh = false;
-    const hm = location.hash.match(/spo=([^&]+)/);
-    if (hm) { try { order = JSON.parse(decodeURIComponent(hm[1])); fresh = true; ls.set('lastOrder', order); history.replaceState(null, '', location.pathname + location.search); } catch (e) { order = null; } }
+    const hm = (location.hash + ' ' + location.href).match(/spo=([A-Za-z0-9_%\-]+)/);
+    const dec = (t) => { try { let b = t.replace(/-/g, '+').replace(/_/g, '/'); while (b.length % 4) b += '='; return JSON.parse(decodeURIComponent(escape(atob(b)))); }
+      catch (e) { return JSON.parse(decodeURIComponent(t)); } };
+    if (hm) { try { order = dec(hm[1]); fresh = true; ls.set('lastOrder', order); history.replaceState(null, '', location.pathname + location.search); } catch (e) { order = null; } }
     if (!order) order = ls.get('lastOrder', null);
     const learned = ls.get('map', {});
 
@@ -810,11 +879,12 @@
     }
 
     let prods;
-    try { bd.textContent = 'Φόρτωση ειδών του site…'; prods = await A.load(); }
+    try { bd.textContent = 'Φόρτωση ειδών του site…'; prods = await A.load(order.rows, (d, t) => { bd.textContent = `Αναζήτηση ειδών στο site… ${d} / ${t}`; }); }
     catch (e) { bd.innerHTML = '<p class="warn">' + esc(e.message || e) + '</p>'; return; }
     const bySku = {}, byKey = {}, byDig = {}, byBc = {}; const dig = (s) => String(s || '').replace(/\D/g, '');
-    prods.forEach((p) => { bySku[p.sku] = p; byKey[String(p.key)] = p; const d = dig(p.sku); if (d) (byDig[d] = byDig[d] || []).push(p);
-      Object.keys(p.bcs).forEach((b) => { if (!byBc[b]) byBc[b] = [p, p.bcs[b]]; }); });
+    const indexP = (p) => { bySku[p.sku] = p; byKey[String(p.key)] = p; const d = dig(p.sku); if (d) (byDig[d] = byDig[d] || []).push(p);
+      Object.keys(p.bcs).forEach((b) => { if (!byBc[b]) byBc[b] = [p, p.bcs[b]]; }); };
+    prods.forEach(indexP);
 
     // ---------------- ταίριασμα ονομάτων ----------------
     const LAT = { 'Α': 'A', 'Β': 'B', 'Ε': 'E', 'Ζ': 'Z', 'Η': 'H', 'Ι': 'I', 'Κ': 'K', 'Μ': 'M', 'Ν': 'N', 'Ο': 'O', 'Ρ': 'P', 'Τ': 'T', 'Υ': 'Y', 'Χ': 'X' };
@@ -881,10 +951,15 @@
       if (e.target.classList.contains('sel')) { r.sel = e.target.value; r.mul = 1; r.qty = r.sel ? A.qty(r, bySku[r.sel], 1) : 0; r.user = true; r.st = r.sel ? 'ok' : 'none'; r.how = r.sel ? 'επιλογή σας' : 'δεν βρέθηκε — διαλέξτε'; render(); }
       if (e.target.classList.contains('qty')) { r.qty = Math.max(0, Math.round(Number(e.target.value) || 0)); }
     });
-    bd.addEventListener('keydown', (e) => {
+    bd.addEventListener('keydown', async (e) => {
       if (!e.target.classList.contains('sr') || e.key !== 'Enter') return;
       const tr = e.target.closest('tr[data-i]'); const r = R[+tr.dataset.i]; const q = e.target.value.trim(); if (!q) return;
-      const exact = prods.filter((p) => p.sku.includes(q) || (q.length >= 8 && q in p.bcs)).slice(0, 8).map((p) => [1, p]);
+      if (A.search) {   // site χωρίς πλήρη κατάλογο: αναζήτηση στον server
+        smsg('Αναζήτηση…');
+        (await A.search(q).catch(() => [])).forEach((p) => { if (!bySku[p.sku]) { p._t = toks(p.name); p._v = vol(p.name); prods.push(p); indexP(p); } });
+        smsg('');
+      }
+      const exact = prods.filter((p) => p.sku === q || p.sku.includes(q) && q.length >= 4 || (q.length >= 8 && q in p.bcs)).slice(0, 8).map((p) => [1, p]);
       r.sug = exact.length ? exact : suggest(q, 12); if (r.sug.length) { r.sel = r.sug[0][1].sku; r.mul = 1; r.qty = A.qty(r, bySku[r.sel], 1); r.user = true; r.how = 'επιλογή σας'; }
       render();
     });
