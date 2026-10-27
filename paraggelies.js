@@ -8,7 +8,8 @@
    επιλογή «Στρογγυλοποίηση κιβωτίων» (πεδίο «Ποσότητα» στις Πληροφορίες του είδους· χωρίς τιμή = ως έχει),
    επιλογή «Καταχώρηση παραγγελίας» → ΡΑΓΚΟΥΣΗΣ / Mmmgroup (site): ο ίδιος σελιδοδείκτης στο site του προμηθευτή
    βάζει την παραγγελία στο ΚΑΛΑΘΙ (ποτέ δεν τη στέλνει — την αποστολή την κάνει ο χρήστης).
-   ΖΟΥΜΗΣ / ΜΙΧΑΛΙΟΣ (28/10/2026): e-mail από rrms2021@gmail.com προς cavazoumis@gmail.com / mixalioscustomers@gmail.com. Με ρυθμισμένη «Αυτόματη αποστολή»
+   ΖΟΥΜΗΣ / ΜΙΧΑΛΙΟΣ / ΜΙΕΤΣΕΛ (28/10/2026): e-mail από rrms2021@gmail.com προς cavazoumis@gmail.com / mixalioscustomers@gmail.com /
+   paros.mietsel@gmail.com. Με ρυθμισμένη «Αυτόματη αποστολή»
    (Google Apps Script του χρήστη, σύνδεσμος/κλειδί μόνο στον browser) στέλνεται με ένα πάτημα· αλλιώς έτοιμο μήνυμα στο Gmail. */
 (async () => {
   'use strict';
@@ -20,7 +21,8 @@
     mas: { vid: '13164', label: 'ΜΑΣΟΥΤΗΣ', url: 'https://expressapp.masoutis.gr/home' },
     // Προμηθευτής με e-mail: ανοίγει έτοιμο μήνυμα στο Gmail· την αποστολή την πατάει ο χρήστης
     zoumis: { vid: '10198', label: 'ΖΟΥΜΗΣ', email: 'cavazoumis@gmail.com', from: 'rrms2021@gmail.com' },
-    michalios: { vid: '10194', label: 'ΜΙΧΑΛΙΟΣ', email: 'mixalioscustomers@gmail.com', from: 'rrms2021@gmail.com' }
+    michalios: { vid: '10194', label: 'ΜΙΧΑΛΙΟΣ', email: 'mixalioscustomers@gmail.com', from: 'rrms2021@gmail.com' },
+    mietsel: { vid: '9982', label: 'ΜΙΕΤΣΕΛ', email: 'paros.mietsel@gmail.com', from: 'rrms2021@gmail.com' }
   };
   if (/ragousiscava\./i.test(location.hostname)) { await supplierModule('ragousis'); return; }
   if (/(^|\.)mmmgroup\.gr$/i.test(location.hostname)) { await supplierModule('mmm'); return; }
@@ -505,8 +507,8 @@
       <div class="st" id="spo-store">Φόρτωση στοιχείων SimplyPOS…</div>
       <div class="quick"><div class="lbl">⚡ Γρήγορη παραγγελία — πωλήσεις τελευταίων 7 ημερών</div>
         <div class="qb"><button type="button" data-q="ragousis" disabled>🛒 ΡΑΓΚΟΥΣΗΣ</button><button type="button" data-q="mmm" disabled>🛒 Mmmgroup</button><button type="button" data-q="mas" disabled>🛒 ΜΑΣΟΥΤΗΣ</button>
-        <button type="button" data-q="zoumis" disabled>✉️ ΖΟΥΜΗΣ</button><button type="button" data-q="michalios" disabled>✉️ ΜΙΧΑΛΙΟΣ</button><button type="button" data-q="excel" disabled>📄 Μόνο Excel</button></div>
-        <div class="hint">Ένα πάτημα: φτιάχνει το Excel και ανοίγει το site του προμηθευτή. Εκεί πατάτε <b>μία φορά</b> τον σελιδοδείκτη και η παραγγελία μπαίνει στο καλάθι. <b>✉️ ΖΟΥΜΗΣ / ΜΙΧΑΛΙΟΣ</b>: η παραγγελία πάει με e-mail από rrms2021@gmail.com (με αυτόματη αποστολή: αμέσως· αλλιώς ανοίγει έτοιμο μήνυμα στο Gmail). «Μόνο Excel» = όλοι οι προμηθευτές.</div></div>
+        <button type="button" data-q="zoumis" disabled>✉️ ΖΟΥΜΗΣ</button><button type="button" data-q="michalios" disabled>✉️ ΜΙΧΑΛΙΟΣ</button><button type="button" data-q="mietsel" disabled>✉️ ΜΙΕΤΣΕΛ</button><button type="button" data-q="excel" disabled>📄 Μόνο Excel</button></div>
+        <div class="hint">Ένα πάτημα: φτιάχνει το Excel και ανοίγει το site του προμηθευτή. Εκεί πατάτε <b>μία φορά</b> τον σελιδοδείκτη και η παραγγελία μπαίνει στο καλάθι. <b>✉️ ΖΟΥΜΗΣ / ΜΙΧΑΛΙΟΣ / ΜΙΕΤΣΕΛ</b>: η παραγγελία πάει με e-mail από rrms2021@gmail.com (με αυτόματη αποστολή: αμέσως· αλλιώς ανοίγει έτοιμο μήνυμα στο Gmail). «Μόνο Excel» = όλοι οι προμηθευτές.</div></div>
       <details id="spo-adv"><summary>⚙️ Ρυθμίσεις (για προχωρημένους)</summary>
       <div class="fld" style="margin-top:10px"><span class="lbl"><span class="num">1</span>Ημερομηνίες πωλήσεων (από – έως)</span>
         <div class="row2"><input type="date" id="spo-from" value="${isoOf(f0)}"><input type="date" id="spo-to" value="${isoOf(y)}"></div>
@@ -534,9 +536,9 @@
       <div class="fld"><span class="lbl"><span class="num">8</span>Στρογγυλοποίηση κιβωτίων</span>${seg('boxRound', saved.boxRound ?? false)}
         <div class="hint">ΝΑΙ: η ποσότητα πάει στο πλησιέστερο κιβώτιο (τουλάχιστον 1) με βάση το πεδίο «Ποσότητα» στις Πληροφορίες του είδους. Είδη χωρίς «Ποσότητα» μένουν ως έχουν.</div></div>
       <div class="fld"><span class="lbl"><span class="num">9</span>Καταχώρηση παραγγελίας</span><select id="spo-send">
-          <option value="">ΟΧΙ — μόνο Excel</option><option value="ragousis">ΡΑΓΚΟΥΣΗΣ — καλάθι στο site</option><option value="mmm">Mmmgroup — καλάθι στο site</option><option value="mas">ΜΑΣΟΥΤΗΣ — καλάθι στο site</option><option value="zoumis">ΖΟΥΜΗΣ — e-mail (cavazoumis@gmail.com)</option><option value="michalios">ΜΙΧΑΛΙΟΣ — e-mail (mixalioscustomers@gmail.com)</option></select>
+          <option value="">ΟΧΙ — μόνο Excel</option><option value="ragousis">ΡΑΓΚΟΥΣΗΣ — καλάθι στο site</option><option value="mmm">Mmmgroup — καλάθι στο site</option><option value="mas">ΜΑΣΟΥΤΗΣ — καλάθι στο site</option><option value="zoumis">ΖΟΥΜΗΣ — e-mail (cavazoumis@gmail.com)</option><option value="michalios">ΜΙΧΑΛΙΟΣ — e-mail (mixalioscustomers@gmail.com)</option><option value="mietsel">ΜΙΕΤΣΕΛ — e-mail (paros.mietsel@gmail.com)</option></select>
         <div class="hint">Site: μετά το Excel πατήστε «Άνοιγμα …» και στο site του προμηθευτή πατήστε ξανά αυτόν τον σελιδοδείκτη· μπαίνουν στο καλάθι όλα τα είδη του Excel. E-mail: ανοίγει έτοιμο μήνυμα στο Gmail. Την αποστολή την κάνετε πάντα εσείς.</div></div>
-      <div class="fld"><span class="lbl">✉️ Αυτόματη αποστολή e-mail (ΖΟΥΜΗΣ, ΜΙΧΑΛΙΟΣ)</span>
+      <div class="fld"><span class="lbl">✉️ Αυτόματη αποστολή e-mail (ΖΟΥΜΗΣ, ΜΙΧΑΛΙΟΣ, ΜΙΕΤΣΕΛ)</span>
         <div class="row2"><input type="text" id="spo-hook" placeholder="https://script.google.com/macros/s/…/exec"><button type="button" id="spo-hook-save" style="padding:8px 12px;border:0;border-radius:8px;background:#1F4E78;color:#fff;font-weight:bold;cursor:pointer">OK</button></div>
         <div class="hint" id="spo-hook-st"></div></div>
       <div class="fld"><span class="lbl">Κατασκευαστής (προαιρετικό)</span><select id="spo-brand"><option value="">Όλοι οι κατασκευαστές</option></select>
@@ -639,7 +641,7 @@
   // Ο σύνδεσμος και το κλειδί αποθηκεύονται ΜΟΝΟ σε αυτόν τον browser (όχι στον δημόσιο κώδικα).
   const hookUrl = () => { const u = store.get('mailHook', ''), k = store.get('mailKey', ''); return u && k ? u + (u.includes('?') ? '&' : '?') + 'k=' + encodeURIComponent(k) : ''; };
   const hookSt = () => { const on = !!hookUrl(); $id('spo-hook').value = store.get('mailHook', '');
-    $id('spo-hook-st').innerHTML = on ? '<b style="color:#2e7d32">✔ Ενεργή</b> — τα «✉️ ΖΟΥΜΗΣ» και «✉️ ΜΙΧΑΛΙΟΣ» στέλνουν την παραγγελία αμέσως (με το Excel συνημμένο), από rrms2021@gmail.com.'
+    $id('spo-hook-st').innerHTML = on ? '<b style="color:#2e7d32">✔ Ενεργή</b> — τα «✉️ ΖΟΥΜΗΣ», «✉️ ΜΙΧΑΛΙΟΣ» και «✉️ ΜΙΕΤΣΕΛ» στέλνουν την παραγγελία αμέσως (με το Excel συνημμένο), από rrms2021@gmail.com.'
       : (store.get('mailKey', '') ? 'Ανενεργή — επικολλήστε το «Web app URL» του script «Παραγγελίες e-mail» και πατήστε OK. Μέχρι τότε ανοίγει έτοιμο μήνυμα στο Gmail.'
         : 'Ανενεργή — λείπει το κλειδί σε αυτόν τον browser. Μέχρι τότε ανοίγει έτοιμο μήνυμα στο Gmail.'); };
   hookSt();
