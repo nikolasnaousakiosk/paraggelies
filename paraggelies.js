@@ -8,7 +8,7 @@
    επιλογή «Στρογγυλοποίηση κιβωτίων» (πεδίο «Ποσότητα» στις Πληροφορίες του είδους· χωρίς τιμή = ως έχει),
    επιλογή «Καταχώρηση παραγγελίας» → ΡΑΓΚΟΥΣΗΣ / Mmmgroup (site): ο ίδιος σελιδοδείκτης στο site του προμηθευτή
    βάζει την παραγγελία στο ΚΑΛΑΘΙ (ποτέ δεν τη στέλνει — την αποστολή την κάνει ο χρήστης).
-   ΖΟΥΜΗΣ (28/10/2026): η παραγγελία ανοίγει ως έτοιμο e-mail στο Gmail προς cavazoumis@gmail.com· την «Αποστολή» την πατάει ο χρήστης. */
+   ΖΟΥΜΗΣ (28/10/2026): η παραγγελία ανοίγει ως έτοιμο e-mail στο Gmail (από rrms2021@gmail.com) προς cavazoumis@gmail.com· την «Αποστολή» την πατάει ο χρήστης. */
 (async () => {
   'use strict';
   const PID = 'sp-orders-panel';
@@ -18,7 +18,7 @@
     mmm: { vid: '9941', label: 'Mmmgroup', url: 'https://www.mmmgroup.gr/' },
     mas: { vid: '13164', label: 'ΜΑΣΟΥΤΗΣ', url: 'https://expressapp.masoutis.gr/home' },
     // Προμηθευτής με e-mail: ανοίγει έτοιμο μήνυμα στο Gmail· την αποστολή την πατάει ο χρήστης
-    zoumis: { vid: '10198', label: 'ΖΟΥΜΗΣ', email: 'cavazoumis@gmail.com' }
+    zoumis: { vid: '10198', label: 'ΖΟΥΜΗΣ', email: 'cavazoumis@gmail.com', from: 'rrms2021@gmail.com' }
   };
   if (/ragousiscava\./i.test(location.hostname)) { await supplierModule('ragousis'); return; }
   if (/(^|\.)mmmgroup\.gr$/i.test(location.hostname)) { await supplierModule('mmm'); return; }
@@ -504,7 +504,7 @@
       <div class="quick"><div class="lbl">⚡ Γρήγορη παραγγελία — πωλήσεις τελευταίων 7 ημερών</div>
         <div class="qb"><button type="button" data-q="ragousis" disabled>🛒 ΡΑΓΚΟΥΣΗΣ</button><button type="button" data-q="mmm" disabled>🛒 Mmmgroup</button><button type="button" data-q="mas" disabled>🛒 ΜΑΣΟΥΤΗΣ</button>
         <button type="button" data-q="zoumis" disabled>✉️ ΖΟΥΜΗΣ</button><button type="button" data-q="excel" disabled>📄 Μόνο Excel</button></div>
-        <div class="hint">Ένα πάτημα: φτιάχνει το Excel και ανοίγει το site του προμηθευτή. Εκεί πατάτε <b>μία φορά</b> τον σελιδοδείκτη και η παραγγελία μπαίνει στο καλάθι. <b>ΖΟΥΜΗΣ</b>: ανοίγει έτοιμο e-mail στο Gmail προς cavazoumis@gmail.com — πατάτε «Αποστολή». «Μόνο Excel» = όλοι οι προμηθευτές.</div></div>
+        <div class="hint">Ένα πάτημα: φτιάχνει το Excel και ανοίγει το site του προμηθευτή. Εκεί πατάτε <b>μία φορά</b> τον σελιδοδείκτη και η παραγγελία μπαίνει στο καλάθι. <b>ΖΟΥΜΗΣ</b>: ανοίγει έτοιμο e-mail στο Gmail (από rrms2021@gmail.com προς cavazoumis@gmail.com) — πατάτε «Αποστολή». «Μόνο Excel» = όλοι οι προμηθευτές.</div></div>
       <details id="spo-adv"><summary>⚙️ Ρυθμίσεις (για προχωρημένους)</summary>
       <div class="fld" style="margin-top:10px"><span class="lbl"><span class="num">1</span>Ημερομηνίες πωλήσεων (από – έως)</span>
         <div class="row2"><input type="date" id="spo-from" value="${isoOf(f0)}"><input type="date" id="spo-to" value="${isoOf(y)}"></div>
@@ -667,11 +667,13 @@
         const body = `Καλησπέρα σας,\n\nπαρακαλώ την παρακάτω παραγγελία για το κατάστημα ${meta.active.name}:\n\n` +
           lines.join('\n') + `\n\nΣύνολο: ${res.rows.length} είδη, ${fmtInt(sum((r) => r.q))} τεμάχια.\n\nΕυχαριστώ,\n${meta.active.name}`;
         const enc = encodeURIComponent;
-        let gm = `https://mail.google.com/mail/?view=cm&fs=1&to=${enc(sd.email)}&su=${enc(subject)}&body=${enc(body)}`;
-        if (gm.length > 7500) gm = `https://mail.google.com/mail/?view=cm&fs=1&to=${enc(sd.email)}&su=${enc(subject)}&body=${enc('Καλησπέρα σας,\n\nπαρακαλώ την παραγγελία στο συνημμένο Excel (' + res.rows.length + ' είδη).\n\nΕυχαριστώ,\n' + meta.active.name)}`;
+        // authuser = λογαριασμός Gmail αποστολέα (ανοίγει αυτός, ακόμη κι αν στον Chrome υπάρχουν κι άλλοι)
+        const GM = `https://mail.google.com/mail/?authuser=${enc(sd.from || '')}&view=cm&fs=1&to=`;
+        let gm = `${GM}${enc(sd.email)}&su=${enc(subject)}&body=${enc(body)}`;
+        if (gm.length > 7500) gm = `${GM}${enc(sd.email)}&su=${enc(subject)}&body=${enc('Καλησπέρα σας,\n\nπαρακαλώ την παραγγελία στο συνημμένο Excel (' + res.rows.length + ' είδη).\n\nΕυχαριστώ,\n' + meta.active.name)}`;
         const mt = `mailto:${sd.email}?subject=${enc(subject)}&body=${enc(body.length > 1800 ? 'Η παραγγελία είναι στο συνημμένο Excel.' : body)}`;
         $id('spo-msg').insertAdjacentHTML('beforeend', `<div style="margin-top:10px;padding:10px;border-radius:8px;background:#e8f5e9">
-          <b>E-mail προς ${esc(sd.label)}</b> (${esc(sd.email)}): ${res.rows.length} είδη.<br>
+          <b>E-mail προς ${esc(sd.label)}</b> (${esc(sd.email)}) από ${esc(sd.from || '')}: ${res.rows.length} είδη.<br>
           <a href="${gm}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;padding:8px 12px;background:#2e7d32;color:#fff;border-radius:8px;font-weight:bold;text-decoration:none">Άνοιγμα στο Gmail ›</a>
           <a href="${mt}" style="display:inline-block;margin:6px 0 0 6px;padding:8px 12px;background:#1F4E78;color:#fff;border-radius:8px;font-weight:bold;text-decoration:none">Πρόγραμμα e-mail</a>
           <button type="button" id="spo-copymail" style="margin:6px 0 0 6px;padding:8px 12px;border:1px solid #c5ced8;border-radius:8px;background:#fff;cursor:pointer;font-weight:bold">Αντιγραφή κειμένου</button>
