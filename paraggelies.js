@@ -9,7 +9,7 @@
    επιλογή «Καταχώρηση παραγγελίας» → ΡΑΓΚΟΥΣΗΣ / Mmmgroup (site): ο ίδιος σελιδοδείκτης στο site του προμηθευτή
    βάζει την παραγγελία στο ΚΑΛΑΘΙ (ποτέ δεν τη στέλνει — την αποστολή την κάνει ο χρήστης).
    ΖΟΥΜΗΣ / ΜΙΧΑΛΙΟΣ / ΜΙΕΤΣΕΛ / ΜΑΡΙΝΟΠΟΥΛΟΣ ΙΚΕ (28/10/2026): e-mail από rrms2021@gmail.com προς cavazoumis@gmail.com /
-   mixalioscustomers@gmail.com / paros.mietsel@gmail.com / marinopl@yahoo.com. ΣΤΕΦΑΝΙΔΗΣ Ι Α.Ε.: info@stefanidisgroup.gr. Με ρυθμισμένη «Αυτόματη αποστολή»
+   mixalioscustomers@gmail.com / paros.mietsel@gmail.com / marinopl@yahoo.com. ΣΤΕΦΑΝΙΔΗΣ Ι Α.Ε.: info@stefanidisgroup.gr. ASTERAS: ktimaroussoswinery@gmail.com. Με ρυθμισμένη «Αυτόματη αποστολή»
    (Google Apps Script του χρήστη, σύνδεσμος/κλειδί μόνο στον browser) στέλνεται με ένα πάτημα· αλλιώς έτοιμο μήνυμα στο Gmail. */
 (async () => {
   'use strict';
@@ -24,7 +24,8 @@
     michalios: { vid: '10194', label: 'ΜΙΧΑΛΙΟΣ', email: 'mixalioscustomers@gmail.com', from: 'rrms2021@gmail.com' },
     mietsel: { vid: '9982', label: 'ΜΙΕΤΣΕΛ', email: 'paros.mietsel@gmail.com', from: 'rrms2021@gmail.com' },
     marinopoulos: { vid: '19775', label: 'ΜΑΡΙΝΟΠΟΥΛΟΣ', email: 'marinopl@yahoo.com', from: 'rrms2021@gmail.com' },
-    stefanidis: { vid: '21663', label: 'ΣΤΕΦΑΝΙΔΗΣ', email: 'info@stefanidisgroup.gr', from: 'rrms2021@gmail.com' }
+    stefanidis: { vid: '21663', label: 'ΣΤΕΦΑΝΙΔΗΣ', email: 'info@stefanidisgroup.gr', from: 'rrms2021@gmail.com' },
+    asteras: { vid: '10187', label: 'ASTERAS', email: 'ktimaroussoswinery@gmail.com', from: 'rrms2021@gmail.com' }
   };
   if (/ragousiscava\./i.test(location.hostname)) { await supplierModule('ragousis'); return; }
   if (/(^|\.)mmmgroup\.gr$/i.test(location.hostname)) { await supplierModule('mmm'); return; }
@@ -509,7 +510,7 @@
       <div class="st" id="spo-store">Φόρτωση στοιχείων SimplyPOS…</div>
       <div class="quick"><div class="lbl">⚡ Γρήγορη παραγγελία — πωλήσεις τελευταίων 7 ημερών</div>
         <div class="qb"><button type="button" data-q="ragousis" disabled>🛒 ΡΑΓΚΟΥΣΗΣ</button><button type="button" data-q="mmm" disabled>🛒 Mmmgroup</button><button type="button" data-q="mas" disabled>🛒 ΜΑΣΟΥΤΗΣ</button>
-        <button type="button" data-q="zoumis" disabled>✉️ ΖΟΥΜΗΣ</button><button type="button" data-q="michalios" disabled>✉️ ΜΙΧΑΛΙΟΣ</button><button type="button" data-q="mietsel" disabled>✉️ ΜΙΕΤΣΕΛ</button><button type="button" data-q="marinopoulos" disabled>✉️ ΜΑΡΙΝΟΠΟΥΛΟΣ</button><button type="button" data-q="stefanidis" disabled>✉️ ΣΤΕΦΑΝΙΔΗΣ</button><button type="button" data-q="excel" disabled>📄 Μόνο Excel</button></div>
+        <button type="button" data-q="zoumis" disabled>✉️ ΖΟΥΜΗΣ</button><button type="button" data-q="michalios" disabled>✉️ ΜΙΧΑΛΙΟΣ</button><button type="button" data-q="mietsel" disabled>✉️ ΜΙΕΤΣΕΛ</button><button type="button" data-q="marinopoulos" disabled>✉️ ΜΑΡΙΝΟΠΟΥΛΟΣ</button><button type="button" data-q="stefanidis" disabled>✉️ ΣΤΕΦΑΝΙΔΗΣ</button><button type="button" data-q="asteras" disabled>✉️ ASTERAS</button><button type="button" data-q="excel" disabled>📄 Μόνο Excel</button></div>
         <div class="hint">Ένα πάτημα: φτιάχνει το Excel και ανοίγει το site του προμηθευτή. Εκεί πατάτε <b>μία φορά</b> τον σελιδοδείκτη και η παραγγελία μπαίνει στο καλάθι. <b>Κουμπιά ✉️</b>: η παραγγελία πάει με e-mail από rrms2021@gmail.com (με αυτόματη αποστολή: αμέσως· αλλιώς ανοίγει έτοιμο μήνυμα στο Gmail). «Μόνο Excel» = όλοι οι προμηθευτές.</div></div>
       <details id="spo-adv"><summary>⚙️ Ρυθμίσεις (για προχωρημένους)</summary>
       <div class="fld" style="margin-top:10px"><span class="lbl"><span class="num">1</span>Ημερομηνίες πωλήσεων (από – έως)</span>
@@ -538,7 +539,7 @@
       <div class="fld"><span class="lbl"><span class="num">8</span>Στρογγυλοποίηση κιβωτίων</span>${seg('boxRound', saved.boxRound ?? false)}
         <div class="hint">ΝΑΙ: η ποσότητα πάει στο πλησιέστερο κιβώτιο (τουλάχιστον 1) με βάση το πεδίο «Ποσότητα» στις Πληροφορίες του είδους. Είδη χωρίς «Ποσότητα» μένουν ως έχουν.</div></div>
       <div class="fld"><span class="lbl"><span class="num">9</span>Καταχώρηση παραγγελίας</span><select id="spo-send">
-          <option value="">ΟΧΙ — μόνο Excel</option><option value="ragousis">ΡΑΓΚΟΥΣΗΣ — καλάθι στο site</option><option value="mmm">Mmmgroup — καλάθι στο site</option><option value="mas">ΜΑΣΟΥΤΗΣ — καλάθι στο site</option><option value="zoumis">ΖΟΥΜΗΣ — e-mail (cavazoumis@gmail.com)</option><option value="michalios">ΜΙΧΑΛΙΟΣ — e-mail (mixalioscustomers@gmail.com)</option><option value="mietsel">ΜΙΕΤΣΕΛ — e-mail (paros.mietsel@gmail.com)</option><option value="marinopoulos">ΜΑΡΙΝΟΠΟΥΛΟΣ ΙΚΕ — e-mail (marinopl@yahoo.com)</option><option value="stefanidis">ΣΤΕΦΑΝΙΔΗΣ Ι Α.Ε. — e-mail (info@stefanidisgroup.gr)</option></select>
+          <option value="">ΟΧΙ — μόνο Excel</option><option value="ragousis">ΡΑΓΚΟΥΣΗΣ — καλάθι στο site</option><option value="mmm">Mmmgroup — καλάθι στο site</option><option value="mas">ΜΑΣΟΥΤΗΣ — καλάθι στο site</option><option value="zoumis">ΖΟΥΜΗΣ — e-mail (cavazoumis@gmail.com)</option><option value="michalios">ΜΙΧΑΛΙΟΣ — e-mail (mixalioscustomers@gmail.com)</option><option value="mietsel">ΜΙΕΤΣΕΛ — e-mail (paros.mietsel@gmail.com)</option><option value="marinopoulos">ΜΑΡΙΝΟΠΟΥΛΟΣ ΙΚΕ — e-mail (marinopl@yahoo.com)</option><option value="stefanidis">ΣΤΕΦΑΝΙΔΗΣ Ι Α.Ε. — e-mail (info@stefanidisgroup.gr)</option><option value="asteras">ASTERAS — e-mail (ktimaroussoswinery@gmail.com)</option></select>
         <div class="hint">Site: μετά το Excel πατήστε «Άνοιγμα …» και στο site του προμηθευτή πατήστε ξανά αυτόν τον σελιδοδείκτη· μπαίνουν στο καλάθι όλα τα είδη του Excel. E-mail: ανοίγει έτοιμο μήνυμα στο Gmail. Την αποστολή την κάνετε πάντα εσείς.</div></div>
       <div class="fld"><span class="lbl">✉️ Αυτόματη αποστολή e-mail (κουμπιά ✉️)</span>
         <div class="row2"><input type="text" id="spo-hook" placeholder="https://script.google.com/macros/s/…/exec"><button type="button" id="spo-hook-save" style="padding:8px 12px;border:0;border-radius:8px;background:#1F4E78;color:#fff;font-weight:bold;cursor:pointer">OK</button></div>
