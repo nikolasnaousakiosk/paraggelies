@@ -15,7 +15,9 @@
   const SEND = {
     ragousis: { vid: '13473', label: 'ΡΑΓΚΟΥΣΗΣ', url: 'https://ragousiscava.it-support.gr/cart' },
     mmm: { vid: '9941', label: 'Mmmgroup', url: 'https://www.mmmgroup.gr/' },
-    mas: { vid: '13164', label: 'ΜΑΣΟΥΤΗΣ', url: 'https://expressapp.masoutis.gr/home' }
+    mas: { vid: '13164', label: 'ΜΑΣΟΥΤΗΣ', url: 'https://expressapp.masoutis.gr/home' },
+    // Προμηθευτής με e-mail: ανοίγει έτοιμο μήνυμα στο Gmail· την αποστολή την πατάει ο χρήστης
+    zoumis: { vid: '10198', label: 'ΖΟΥΜΗΣ', email: 'cavazoumis@gmail.com' }
   };
   if (/ragousiscava\./i.test(location.hostname)) { await supplierModule('ragousis'); return; }
   if (/(^|\.)mmmgroup\.gr$/i.test(location.hostname)) { await supplierModule('mmm'); return; }
@@ -500,8 +502,8 @@
       <div class="st" id="spo-store">Φόρτωση στοιχείων SimplyPOS…</div>
       <div class="quick"><div class="lbl">⚡ Γρήγορη παραγγελία — πωλήσεις τελευταίων 7 ημερών</div>
         <div class="qb"><button type="button" data-q="ragousis" disabled>🛒 ΡΑΓΚΟΥΣΗΣ</button><button type="button" data-q="mmm" disabled>🛒 Mmmgroup</button><button type="button" data-q="mas" disabled>🛒 ΜΑΣΟΥΤΗΣ</button>
-        <button type="button" data-q="excel" disabled>📄 Μόνο Excel</button></div>
-        <div class="hint">Ένα πάτημα: φτιάχνει το Excel και ανοίγει το site του προμηθευτή. Εκεί πατάτε <b>μία φορά</b> τον σελιδοδείκτη και η παραγγελία μπαίνει στο καλάθι. «Μόνο Excel» = όλοι οι προμηθευτές.</div></div>
+        <button type="button" data-q="zoumis" disabled>✉️ ΖΟΥΜΗΣ</button><button type="button" data-q="excel" disabled>📄 Μόνο Excel</button></div>
+        <div class="hint">Ένα πάτημα: φτιάχνει το Excel και ανοίγει το site του προμηθευτή. Εκεί πατάτε <b>μία φορά</b> τον σελιδοδείκτη και η παραγγελία μπαίνει στο καλάθι. <b>ΖΟΥΜΗΣ</b>: ανοίγει έτοιμο e-mail στο Gmail προς cavazoumis@gmail.com — πατάτε «Αποστολή». «Μόνο Excel» = όλοι οι προμηθευτές.</div></div>
       <details id="spo-adv"><summary>⚙️ Ρυθμίσεις (για προχωρημένους)</summary>
       <div class="fld" style="margin-top:10px"><span class="lbl"><span class="num">1</span>Ημερομηνίες πωλήσεων (από – έως)</span>
         <div class="row2"><input type="date" id="spo-from" value="${isoOf(f0)}"><input type="date" id="spo-to" value="${isoOf(y)}"></div>
@@ -529,8 +531,8 @@
       <div class="fld"><span class="lbl"><span class="num">8</span>Στρογγυλοποίηση κιβωτίων</span>${seg('boxRound', saved.boxRound ?? false)}
         <div class="hint">ΝΑΙ: η ποσότητα πάει στο πλησιέστερο κιβώτιο (τουλάχιστον 1) με βάση το πεδίο «Ποσότητα» στις Πληροφορίες του είδους. Είδη χωρίς «Ποσότητα» μένουν ως έχουν.</div></div>
       <div class="fld"><span class="lbl"><span class="num">9</span>Καταχώρηση παραγγελίας</span><select id="spo-send">
-          <option value="">ΟΧΙ — μόνο Excel</option><option value="ragousis">ΡΑΓΚΟΥΣΗΣ — καλάθι στο site</option><option value="mmm">Mmmgroup — καλάθι στο site</option><option value="mas">ΜΑΣΟΥΤΗΣ — καλάθι στο site</option></select>
-        <div class="hint">Μετά το Excel πατήστε «Άνοιγμα …» και στο site του προμηθευτή πατήστε ξανά αυτόν τον σελιδοδείκτη. Μπαίνουν στο καλάθι όλα τα είδη του Excel· την αποστολή την κάνετε εσείς.</div></div>
+          <option value="">ΟΧΙ — μόνο Excel</option><option value="ragousis">ΡΑΓΚΟΥΣΗΣ — καλάθι στο site</option><option value="mmm">Mmmgroup — καλάθι στο site</option><option value="mas">ΜΑΣΟΥΤΗΣ — καλάθι στο site</option><option value="zoumis">ΖΟΥΜΗΣ — e-mail (cavazoumis@gmail.com)</option></select>
+        <div class="hint">Site: μετά το Excel πατήστε «Άνοιγμα …» και στο site του προμηθευτή πατήστε ξανά αυτόν τον σελιδοδείκτη· μπαίνουν στο καλάθι όλα τα είδη του Excel. E-mail: ανοίγει έτοιμο μήνυμα στο Gmail. Την αποστολή την κάνετε πάντα εσείς.</div></div>
       <div class="fld"><span class="lbl">Κατασκευαστής (προαιρετικό)</span><select id="spo-brand"><option value="">Όλοι οι κατασκευαστές</option></select>
         <div class="hint">Μόνο είδη αυτού του κατασκευαστή (όπως είναι δηλωμένος στο είδος στο SimplyPOS).</div></div>
       <button type="button" class="go" id="spo-go" disabled>ΔΗΜΙΟΥΡΓΙΑ EXCEL</button></details>
@@ -655,7 +657,29 @@
         <table>${res.vorder.slice(0, 12).map((v) => `<tr><td>${esc(v)}</td><td class="r">${fmtEur(res.tot[v])}</td></tr>`).join('')}
         ${res.vorder.length > 12 ? `<tr><td colspan="2">… και ${res.vorder.length - 12} ακόμη</td></tr>` : ''}</table>`);
       const sd = SEND[o.send];
-      if (sd && res.rows.length) {
+      if (sd && sd.email && res.rows.length) {
+        // e-mail: έτοιμο μήνυμα στο Gmail (δεν στέλνεται αυτόματα — ο χρήστης πατάει «Αποστολή»)
+        const now = new Date(), dstr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
+        const subject = `Παραγγελία ${meta.active.name} — ${dstr}`;
+        const lines = res.rows.map((r, i) => `${i + 1}. ${r.nm} — ${fmtInt(r.q)} τεμ.` +
+          (r.boxes ? ` (${r.boxes} κιβ. × ${r.pk})` : '') + (r.code ? `   [κωδ. ${r.code}]` : ''));
+        const body = `Καλησπέρα σας,\n\nπαρακαλώ την παρακάτω παραγγελία για το κατάστημα ${meta.active.name}:\n\n` +
+          lines.join('\n') + `\n\nΣύνολο: ${res.rows.length} είδη, ${fmtInt(sum((r) => r.q))} τεμάχια.\n\nΕυχαριστώ,\n${meta.active.name}`;
+        const enc = encodeURIComponent;
+        let gm = `https://mail.google.com/mail/?view=cm&fs=1&to=${enc(sd.email)}&su=${enc(subject)}&body=${enc(body)}`;
+        if (gm.length > 7500) gm = `https://mail.google.com/mail/?view=cm&fs=1&to=${enc(sd.email)}&su=${enc(subject)}&body=${enc('Καλησπέρα σας,\n\nπαρακαλώ την παραγγελία στο συνημμένο Excel (' + res.rows.length + ' είδη).\n\nΕυχαριστώ,\n' + meta.active.name)}`;
+        const mt = `mailto:${sd.email}?subject=${enc(subject)}&body=${enc(body.length > 1800 ? 'Η παραγγελία είναι στο συνημμένο Excel.' : body)}`;
+        $id('spo-msg').insertAdjacentHTML('beforeend', `<div style="margin-top:10px;padding:10px;border-radius:8px;background:#e8f5e9">
+          <b>E-mail προς ${esc(sd.label)}</b> (${esc(sd.email)}): ${res.rows.length} είδη.<br>
+          <a href="${gm}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;padding:8px 12px;background:#2e7d32;color:#fff;border-radius:8px;font-weight:bold;text-decoration:none">Άνοιγμα στο Gmail ›</a>
+          <a href="${mt}" style="display:inline-block;margin:6px 0 0 6px;padding:8px 12px;background:#1F4E78;color:#fff;border-radius:8px;font-weight:bold;text-decoration:none">Πρόγραμμα e-mail</a>
+          <button type="button" id="spo-copymail" style="margin:6px 0 0 6px;padding:8px 12px;border:1px solid #c5ced8;border-radius:8px;background:#fff;cursor:pointer;font-weight:bold">Αντιγραφή κειμένου</button>
+          <div class="hint">Το μήνυμα ΔΕΝ στέλνεται αυτόματα: ελέγξτε το και πατήστε «Αποστολή». Αν θέλετε, επισυνάψτε το Excel που κατέβηκε (${esc(fname)}).</div></div>`);
+        $id('spo-copymail').onclick = () => { const t = subject + '\n\n' + body;
+          (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => { $id('spo-copymail').textContent = '✔ Αντιγράφηκε'; },
+            () => { prompt('Αντιγραφή (Ctrl+C):', t); }); };
+        if (win && !win.closed) { try { win.location.href = gm; } catch (e) {} }
+      } else if (sd && !sd.email && res.rows.length) {
         // η παραγγελία πάει στο site μέσα στο #hash του συνδέσμου (δεν φεύγει προς κανέναν server)
         const payload = { v: 2, to: o.send, store: meta.active.name, period: `${isoToGr(o.from)}–${isoToGr(o.to)}`,
           rows: res.rows.map((r) => [r.cd, r.nm, r.q, r.pk || 0, r.boxes == null ? 0 : r.boxes,
