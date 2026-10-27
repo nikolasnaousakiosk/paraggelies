@@ -8,7 +8,8 @@
    επιλογή «Στρογγυλοποίηση κιβωτίων» (πεδίο «Ποσότητα» στις Πληροφορίες του είδους· χωρίς τιμή = ως έχει),
    επιλογή «Καταχώρηση παραγγελίας» → ΡΑΓΚΟΥΣΗΣ / Mmmgroup (site): ο ίδιος σελιδοδείκτης στο site του προμηθευτή
    βάζει την παραγγελία στο ΚΑΛΑΘΙ (ποτέ δεν τη στέλνει — την αποστολή την κάνει ο χρήστης).
-   ΖΟΥΜΗΣ (28/10/2026): η παραγγελία ανοίγει ως έτοιμο e-mail στο Gmail (από rrms2021@gmail.com) προς cavazoumis@gmail.com· την «Αποστολή» την πατάει ο χρήστης. */
+   ΖΟΥΜΗΣ (28/10/2026): e-mail από rrms2021@gmail.com προς cavazoumis@gmail.com. Με ρυθμισμένη «Αυτόματη αποστολή»
+   (Google Apps Script του χρήστη, σύνδεσμος/κλειδί μόνο στον browser) στέλνεται με ένα πάτημα· αλλιώς έτοιμο μήνυμα στο Gmail. */
 (async () => {
   'use strict';
   const PID = 'sp-orders-panel';
@@ -470,7 +471,7 @@
   #${PID} .lbl{display:block;font-weight:bold;margin-bottom:5px;font-size:13px}
   #${PID} .num{display:inline-block;width:20px;height:20px;border-radius:50%;background:#1F4E78;color:#fff;text-align:center;font-size:12px;line-height:20px;margin-right:6px}
   #${PID} .row2{display:flex;gap:8px}
-  #${PID} input[type=date],#${PID} input[type=number],#${PID} select{width:100%;padding:8px;border:1px solid #c5ced8;border-radius:8px;font-size:14px;background:#fff;color:#1f2933}
+  #${PID} input[type=date],#${PID} input[type=number],#${PID} input[type=text],#${PID} select{width:100%;padding:8px;border:1px solid #c5ced8;border-radius:8px;font-size:14px;background:#fff;color:#1f2933}
   #${PID} .seg{display:flex;border:1px solid #c5ced8;border-radius:8px;overflow:hidden}
   #${PID} .seg button{flex:1;padding:8px;border:0;background:#fff;cursor:pointer;font-weight:bold;color:#52606d}
   #${PID} .seg button.on{background:#1F4E78;color:#fff}
@@ -534,6 +535,9 @@
       <div class="fld"><span class="lbl"><span class="num">9</span>Καταχώρηση παραγγελίας</span><select id="spo-send">
           <option value="">ΟΧΙ — μόνο Excel</option><option value="ragousis">ΡΑΓΚΟΥΣΗΣ — καλάθι στο site</option><option value="mmm">Mmmgroup — καλάθι στο site</option><option value="mas">ΜΑΣΟΥΤΗΣ — καλάθι στο site</option><option value="zoumis">ΖΟΥΜΗΣ — e-mail (cavazoumis@gmail.com)</option></select>
         <div class="hint">Site: μετά το Excel πατήστε «Άνοιγμα …» και στο site του προμηθευτή πατήστε ξανά αυτόν τον σελιδοδείκτη· μπαίνουν στο καλάθι όλα τα είδη του Excel. E-mail: ανοίγει έτοιμο μήνυμα στο Gmail. Την αποστολή την κάνετε πάντα εσείς.</div></div>
+      <div class="fld"><span class="lbl">✉️ Αυτόματη αποστολή e-mail (ΖΟΥΜΗΣ)</span>
+        <div class="row2"><input type="text" id="spo-hook" placeholder="https://script.google.com/macros/s/…/exec"><button type="button" id="spo-hook-save" style="padding:8px 12px;border:0;border-radius:8px;background:#1F4E78;color:#fff;font-weight:bold;cursor:pointer">OK</button></div>
+        <div class="hint" id="spo-hook-st"></div></div>
       <div class="fld"><span class="lbl">Κατασκευαστής (προαιρετικό)</span><select id="spo-brand"><option value="">Όλοι οι κατασκευαστές</option></select>
         <div class="hint">Μόνο είδη αυτού του κατασκευαστή (όπως είναι δηλωμένος στο είδος στο SimplyPOS).</div></div>
       <button type="button" class="go" id="spo-go" disabled>ΔΗΜΙΟΥΡΓΙΑ EXCEL</button></details>
@@ -630,6 +634,27 @@
     return { res, fname, bytes: buf.byteLength, periods, buf };
   }
 
+  // Αυτόματη αποστολή e-mail: Google Apps Script στον λογαριασμό του χρήστη (στέλνει μόνο σε επιτρεπτούς παραλήπτες).
+  // Ο σύνδεσμος και το κλειδί αποθηκεύονται ΜΟΝΟ σε αυτόν τον browser (όχι στον δημόσιο κώδικα).
+  const hookUrl = () => { const u = store.get('mailHook', ''), k = store.get('mailKey', ''); return u && k ? u + (u.includes('?') ? '&' : '?') + 'k=' + encodeURIComponent(k) : ''; };
+  const hookSt = () => { const on = !!hookUrl(); $id('spo-hook').value = store.get('mailHook', '');
+    $id('spo-hook-st').innerHTML = on ? '<b style="color:#2e7d32">✔ Ενεργή</b> — το «✉️ ΖΟΥΜΗΣ» στέλνει την παραγγελία αμέσως (με το Excel συνημμένο), από rrms2021@gmail.com.'
+      : (store.get('mailKey', '') ? 'Ανενεργή — επικολλήστε το «Web app URL» του script «Παραγγελίες e-mail» και πατήστε OK. Μέχρι τότε ανοίγει έτοιμο μήνυμα στο Gmail.'
+        : 'Ανενεργή — λείπει το κλειδί σε αυτόν τον browser. Μέχρι τότε ανοίγει έτοιμο μήνυμα στο Gmail.'); };
+  hookSt();
+  $id('spo-hook-save').addEventListener('click', async () => {
+    let v = $id('spo-hook').value.trim();
+    if (!v) { store.set('mailHook', ''); hookSt(); return; }
+    const km = v.match(/[?&]k=([^&#]+)/); if (km) { store.set('mailKey', decodeURIComponent(km[1])); }
+    v = v.replace(/[?#].*$/, '');
+    if (!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(v)) { $id('spo-hook-st').innerHTML = '<b style="color:#b71c1c">Ο σύνδεσμος πρέπει να είναι της μορφής https://script.google.com/macros/s/…/exec</b>'; return; }
+    store.set('mailHook', v); $id('spo-hook-st').textContent = 'Έλεγχος σύνδεσης…';
+    try { const j = await fetch(hookUrl()).then((r) => r.json());
+      if (!j.ready) throw new Error('δεν απάντησε σωστά'); if (!j.keyOk) throw new Error('λάθος κλειδί');
+      hookSt(); $id('spo-hook-st').insertAdjacentHTML('beforeend', ' (έλεγχος OK — δεν στάλθηκε τίποτα)');
+    } catch (e) { $id('spo-hook-st').innerHTML = '<b style="color:#b71c1c">Η σύνδεση απέτυχε: ' + esc(e.message || e) + '.</b> Ελέγξτε ότι η δημοσίευση είναι «Web app», «Execute as: Me», «Who has access: Anyone».'; }
+  });
+
   // Γρήγορα κουμπιά: τελευταίες 7 ημέρες, ο προμηθευτής, «Φθηνότερος = ΟΧΙ», όλοι οι κατασκευαστές, καταχώρηση στο site
   panel.querySelectorAll('.qb button').forEach((b) => b.addEventListener('click', () => {
     const q = b.dataset.q, t = new Date(); t.setDate(t.getDate() - 1); const f = new Date(t); f.setDate(f.getDate() - 6);
@@ -640,7 +665,7 @@
     $id('spo-send').value = sd ? q : '';
     if (sd) { const sg = panel.querySelector('.seg[data-key="cheapest"]'); [...sg.children].forEach((x) => x.classList.toggle('on', x.dataset.v === '0')); }
     // το παράθυρο ανοίγει ΤΩΡΑ (με το πάτημα), αλλιώς ο browser το μπλοκάρει· η διεύθυνση μπαίνει όταν είναι έτοιμη η παραγγελία
-    let win = null; if (sd) { try { win = window.open('about:blank', '_blank'); if (win) win.document.write('<p style="font:16px Arial;padding:20px">Ετοιμάζεται η παραγγελία από το SimplyPOS…</p>'); } catch (e) { win = null; } }
+    let win = null; if (sd && !(sd.email && hookUrl())) { try { win = window.open('about:blank', '_blank'); if (win) win.document.write('<p style="font:16px Arial;padding:20px">Ετοιμάζεται η παραγγελία από το SimplyPOS…</p>'); } catch (e) { win = null; } }
     doRun(win);
   }));
   $id('spo-go').addEventListener('click', () => doRun(null));
@@ -649,7 +674,7 @@
     const btn = $id('spo-go'); btn.disabled = true; btn.textContent = 'Υπολογισμός…'; msg('Διαβάζω πωλήσεις και αποθέματα…');
     panel.querySelectorAll('.qb button').forEach((b) => { b.disabled = true; });
     try {
-      const { res, fname } = await run(o, true);
+      const { res, fname, buf } = await run(o, true);
       const sum = (k) => res.rows.reduce((a, r) => a + k(r), 0);
       if (!res.rows.length) { msg('Δεν βγήκε καμία γραμμή παραγγελίας με αυτές τις επιλογές. Το Excel κατέβηκε κενό.'); }
       else msg(`<div class="big">✔ ${esc(fname)}</div>
@@ -672,6 +697,24 @@
         let gm = `${GM}${enc(sd.email)}&su=${enc(subject)}&body=${enc(body)}`;
         if (gm.length > 7500) gm = `${GM}${enc(sd.email)}&su=${enc(subject)}&body=${enc('Καλησπέρα σας,\n\nπαρακαλώ την παραγγελία στο συνημμένο Excel (' + res.rows.length + ' είδη).\n\nΕυχαριστώ,\n' + meta.active.name)}`;
         const mt = `mailto:${sd.email}?subject=${enc(subject)}&body=${enc(body.length > 1800 ? 'Η παραγγελία είναι στο συνημμένο Excel.' : body)}`;
+        let sentOk = false;
+        if (hookUrl()) {
+          $id('spo-msg').insertAdjacentHTML('beforeend', '<div id="spo-sending" style="margin-top:10px;padding:10px;border-radius:8px;background:#fff8d6">✉️ Αποστολή e-mail στον ' + esc(sd.label) + '…</div>');
+          try {
+            const u8 = new Uint8Array(buf); let bin = ''; for (let i = 0; i < u8.length; i += 0x8000) bin += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000));
+            const r = await fetch(hookUrl(), { method: 'POST', headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+              body: JSON.stringify({ to: sd.email, subject, body, xlsx: btoa(bin), filename: fname }) });
+            const j = await r.json();
+            if (!j.ok) throw new Error(j.error || 'άγνωστο σφάλμα');
+            sentOk = true;
+            $id('spo-sending').outerHTML = `<div style="margin-top:10px;padding:12px;border-radius:8px;background:#e8f5e9;font-size:14px">
+              <b>✔ Η παραγγελία στάλθηκε</b> στον ${esc(sd.label)} (${esc(sd.email)}) από ${esc(sd.from || '')} — ${res.rows.length} είδη, με το Excel συνημμένο.
+              <div class="hint">Θα τη βρείτε στα «Απεσταλμένα» του Gmail.</div></div>`;
+          } catch (e) {
+            $id('spo-sending').outerHTML = `<div style="margin-top:10px;padding:10px;border-radius:8px;background:#fde2e2"><b>Η αυτόματη αποστολή απέτυχε:</b> ${esc(e.message || e)}. Στείλτε την από το Gmail με το παρακάτω κουμπί.</div>`;
+          }
+        }
+        if (!sentOk) {
         $id('spo-msg').insertAdjacentHTML('beforeend', `<div style="margin-top:10px;padding:10px;border-radius:8px;background:#e8f5e9">
           <b>E-mail προς ${esc(sd.label)}</b> (${esc(sd.email)}) από ${esc(sd.from || '')}: ${res.rows.length} είδη.<br>
           <a href="${gm}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;padding:8px 12px;background:#2e7d32;color:#fff;border-radius:8px;font-weight:bold;text-decoration:none">Άνοιγμα στο Gmail ›</a>
@@ -682,6 +725,7 @@
           (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject()).then(() => { $id('spo-copymail').textContent = '✔ Αντιγράφηκε'; },
             () => { prompt('Αντιγραφή (Ctrl+C):', t); }); };
         if (win && !win.closed) { try { win.location.href = gm; } catch (e) {} }
+        } else if (win && !win.closed) win.close();
       } else if (sd && !sd.email && res.rows.length) {
         // η παραγγελία πάει στο site μέσα στο #hash του συνδέσμου (δεν φεύγει προς κανέναν server)
         const payload = { v: 2, to: o.send, store: meta.active.name, period: `${isoToGr(o.from)}–${isoToGr(o.to)}`,
