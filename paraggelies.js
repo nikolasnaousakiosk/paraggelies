@@ -208,10 +208,10 @@
       if (o.cheapest) pick = list[0];
       else if (o.vendor) {
         // ΟΧΙ + επιλεγμένος προμηθευτής → μόνο τα είδη που έχουν αυτόν τον προμηθευτή
-        // δηλωμένο στην καρτέλα «Προμηθευτής» του είδους στο SimplyPOS (κύριο ή δευτερεύοντα)
+        // ως ΚΥΡΙΟ προμηθευτή στο SimplyPOS (αλλαγή 29/10/2026: όχι πια και ως δευτερεύοντα)
         const want = String(o.vendor);
         const decl = (x.sCdList || []).filter((s) => String(s.vid) === want);
-        if (mainVid !== want && !decl.length) continue;
+        if (mainVid !== want) continue;
         pick = offers[want];
         if (!pick) {
           const fb = (offers[mainVid] && offers[mainVid].net > 0) ? offers[mainVid] : (mainCost > 0.02 ? { vid: x.vid, cost: mainCost, disc: 0, net: mainCost } : list[0]);
@@ -289,7 +289,7 @@
       ['Περίοδος πωλήσεων', `${isoToGr(o.from)} – ${isoToGr(o.to)}`],
       ['Αφαίρεση τρέχοντος αποθέματος', o.subStock ? 'ΝΑΙ' : 'ΟΧΙ (ποσότητα = πωλήσεις)'],
       ['Μ.Ο. πωλήσεων ίδιας περιόδου (έως 5 προηγούμενα έτη)', o.avg2y ? `ΝΑΙ — ${periods.yrs.join(' · ')} · διαιρείται με όσα έτη είχε πωλήσεις το είδος` : 'ΟΧΙ'],
-      ['Φθηνότερος προμηθευτής', o.cheapest ? 'ΝΑΙ' : (o.vendor ? 'ΟΧΙ — είδη με δηλωμένο τον προμηθευτή: ' + (meta.vendors[o.vendor] || o.vendor) : 'ΟΧΙ (κύριος προμηθευτής κάθε είδους)')],
+      ['Φθηνότερος προμηθευτής', o.cheapest ? 'ΝΑΙ' : (o.vendor ? 'ΟΧΙ — είδη με κύριο προμηθευτή: ' + (meta.vendors[o.vendor] || o.vendor) : 'ΟΧΙ (κύριος προμηθευτής κάθε είδους)')],
       ['Παραγγελία μόνο αν πωλήσεις >', `${o.minSales} τεμ.`],
       ['Υπέρβαση επιθυμητού αποθέματος', o.overDesired ? 'ΝΑΙ' : 'ΟΧΙ (τρέχον + παραγγελία ≤ επιθυμητό)'],
       ['Προμηθευτής', o.vendor ? (meta.vendors[o.vendor] || o.vendor) : 'Όλοι'],
@@ -521,7 +521,7 @@
       <div class="fld"><span class="lbl"><span class="num">2</span>Αφαίρεση τρέχοντος αποθέματος</span>${seg('subStock', saved.subStock ?? false)}
         <div class="hint">ΟΧΙ: ποσότητα = πωλήσεις περιόδου. ΝΑΙ: ποσότητα = πωλήσεις − τρέχον απόθεμα.</div></div>
       <div class="fld"><span class="lbl"><span class="num">3</span>Φθηνότερος προμηθευτής</span>${seg('cheapest', saved.cheapest ?? true)}
-        <div class="hint">ΝΑΙ: κάθε είδος στον προμηθευτή με το χαμηλότερο καθαρό κόστος. ΟΧΙ: τα είδη που έχουν δηλωμένο στην καρτέλα «Προμηθευτής» τον προμηθευτή που διαλέγετε παρακάτω· αν δεν διαλέξετε, στον κύριο προμηθευτή κάθε είδους.</div></div>
+        <div class="hint">ΝΑΙ: κάθε είδος στον προμηθευτή με το χαμηλότερο καθαρό κόστος. ΟΧΙ: τα είδη που έχουν κύριο προμηθευτή αυτόν που διαλέγετε παρακάτω· αν δεν διαλέξετε, στον κύριο προμηθευτή κάθε είδους.</div></div>
       <div class="fld"><span class="lbl"><span class="num">4</span>Παραγγελία μόνο αν οι πωλήσεις ξεπερνούν (τεμ.)</span>
         <input type="number" id="spo-min" min="0" step="1" value="${saved.minSales ?? 0}">
         <div class="hint">0 = όλα τα είδη που πουλήθηκαν.</div></div>
@@ -530,7 +530,7 @@
       <div class="fld"><span class="lbl"><span class="num">6</span>Υπέρβαση επιθυμητού αποθέματος</span>${seg('overDesired', saved.overDesired ?? true)}
         <div class="hint">ΟΧΙ: η παραγγελία κόβεται ώστε τρέχον + παραγγελία ≤ επιθυμητό απόθεμα.</div></div>
       <div class="fld"><span class="lbl">Προμηθευτής (προαιρετικό)</span><select id="spo-vendor"><option value="">Όλοι οι προμηθευτές</option></select>
-        <div class="hint">Με «Φθηνότερος = ΟΧΙ»: όλα τα είδη που έχουν αυτόν τον προμηθευτή δηλωμένο στο SimplyPOS (κύριο ή δευτερεύοντα). Με «ΝΑΙ»: μόνο όσα είναι φθηνότερα σε αυτόν.</div></div>
+        <div class="hint">Με «Φθηνότερος = ΟΧΙ»: μόνο τα είδη που έχουν αυτόν τον προμηθευτή ως κύριο στο SimplyPOS. Με «ΝΑΙ»: μόνο όσα είναι φθηνότερα σε αυτόν.</div></div>
       <div class="fld"><span class="lbl"><span class="num">7</span>Εκτύπωση (A4)</span><select id="spo-print">
           <option value="summary">1. ΣΥΝΟΨΗ — φύλλο Σύνοψη</option>
           <option value="all">2. ΣΥΝΟΛΙΚΗ — φύλλο Δεδομένα (όλα τα είδη)</option>
