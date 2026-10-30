@@ -24,7 +24,7 @@
     michalios: { vid: '10194', label: 'ΜΙΧΑΛΙΟΣ', email: 'mixalioscustomers@gmail.com', from: 'rrms2021@gmail.com' },
     mietsel: { vid: '9982', label: 'ΜΙΕΤΣΕΛ', email: 'paros.mietsel@gmail.com', from: 'rrms2021@gmail.com' },
     marinopoulos: { vid: '19775', label: 'ΜΑΡΙΝΟΠΟΥΛΟΣ', email: 'marinopl@yahoo.com', from: 'rrms2021@gmail.com' },
-    stefanidis: { vid: '21663', label: 'ΣΤΕΦΑΝΙΔΗΣ', email: 'info@stefanidisgroup.gr', from: 'rrms2021@gmail.com' },
+    stefanidis: { vid: '21663', label: 'ΣΤΕΦΑΝΙΔΗΣ', email: 'info@stefanidisgroup.gr', from: 'rrms2021@gmail.com', minSales: 0 },   // γρήγορο κουμπί: πεδίο 4 = 0 (30/10/2026)
     asteras: { vid: '10187', label: 'ASTERAS', email: 'ktimaroussoswinery@gmail.com', from: 'rrms2021@gmail.com' }
   };
   if (/ragousiscava\./i.test(location.hostname)) { await supplierModule('ragousis'); return; }
@@ -670,6 +670,7 @@
     $id('spo-vendor').value = sd ? sd.vid : '';
     $id('spo-send').value = sd ? q : '';
     if (sd) { const sg = panel.querySelector('.seg[data-key="cheapest"]'); [...sg.children].forEach((x) => x.classList.toggle('on', x.dataset.v === '0')); }
+    if (sd && sd.minSales != null) $id('spo-min').value = sd.minSales;   // προεπιλογή «πωλήσεις πάνω από» ανά προμηθευτή
     // το παράθυρο ανοίγει ΤΩΡΑ (με το πάτημα), αλλιώς ο browser το μπλοκάρει· η διεύθυνση μπαίνει όταν είναι έτοιμη η παραγγελία
     let win = null; if (sd && !(sd.email && hookUrl())) { try { win = window.open('about:blank', '_blank'); if (win) win.document.write('<p style="font:16px Arial;padding:20px">Ετοιμάζεται η παραγγελία από το SimplyPOS…</p>'); } catch (e) { win = null; } }
     doRun(win);
