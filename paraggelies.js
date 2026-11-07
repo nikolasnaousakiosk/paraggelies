@@ -163,8 +163,8 @@
     sYs = sYs || [];
     brandOf = brandOf || {}; packOf = packOf || {};
     const vname = (v) => (v == null || v === '' ? '' : (meta.vendors[v] || ('Προμηθευτής #' + v)));
-    // Όριο ασφαλείας: εξετάζονται ΟΛΑ τα είδη του καταστήματος (όχι μόνο όσα πουλήθηκαν)
-    const codes = o.safety ? new Set(P.map((x) => String(x.cd))) : new Set([...Object.keys(sCur), ...sYs.flatMap((m) => Object.keys(m))]);
+    // Όριο ασφαλείας: εξετάζονται ΚΑΙ τα είδη χωρίς πωλήσεις (όλα τα είδη του καταστήματος)
+    const codes = new Set([...Object.keys(sCur), ...sYs.flatMap((m) => Object.keys(m)), ...(o.safety ? P.map((x) => String(x.cd)) : [])]);
     const byCd = {}; P.forEach((x) => { byCd[String(x.cd)] = x; });
     const rows = [], skippedNoCost = [], unknown = [];
     for (const cd of codes) {
@@ -177,23 +177,24 @@
       const yAvg = yN ? yv.reduce((a, v) => a + v, 0) / yN : 0;
       const base = o.avg2y ? yAvg : cur;
       const cstk = Number(x.cstk) || 0, dstk = Number(x.dstk) || 0, rp = Number(x.rstk) || 0;   // rstk = «Όριο παραγγελίας» στο SimplyPOS
-      let qRaw; const notes = [];
-      if (o.safety) {
-        // Όριο ασφαλείας (7/11/2026): τρέχον < όριο παραγγελίας → παραγγελία έως το επιθυμητό απόθεμα
-        if (o.allowed && !o.allowed.has(cd)) continue;
-        if (!(rp > 0 && cstk < rp && dstk > cstk)) continue;
-        qRaw = Math.ceil(dstk - cstk - 1e-9);
-        notes.push(`Όριο ασφαλείας: τρέχον ${cstk} < όριο ${rp} → έως επιθυμητό ${dstk}.`);
-      } else {
-        if (!(base > o.minSales)) continue;
-        qRaw = Math.max(0, Math.ceil((o.subStock ? base - cstk : base) - 1e-9));
+      const notes = [];
+      // 1) κανονική παραγγελία από πωλήσεις (πεδία 1–6)
+      let qSales = 0;
+      if (base > o.minSales) {
+        const qRaw = Math.max(0, Math.ceil((o.subStock ? base - cstk : base) - 1e-9));
+        qSales = qRaw;
+        if (o.avg2y && yN) notes.push('Μ.Ο. ' + yN + (yN === 1 ? ' έτους' : ' ετών') + ' (' + yv.map((v, i) => (o.yearsLbl ? o.yearsLbl[i] : 'έτος -' + (i + 1)) + ': ' + Math.round(v * 100) / 100).join(', ') + ').');
+        if (!o.overDesired) {
+          if (dstk > 0) qSales = Math.min(qRaw, Math.max(0, Math.ceil(dstk - cstk - 1e-9)));
+          else notes.push('Χωρίς επιθυμητό απόθεμα — δεν εφαρμόστηκε όριο.');
+        }
       }
-      let q = qRaw;
-      if (!o.safety && o.avg2y && yN) notes.push('Μ.Ο. ' + yN + (yN === 1 ? ' έτους' : ' ετών') + ' (' + yv.map((v, i) => (o.yearsLbl ? o.yearsLbl[i] : 'έτος -' + (i + 1)) + ': ' + Math.round(v * 100) / 100).join(', ') + ').');
-      if (!o.safety && !o.overDesired) {
-        if (dstk > 0) q = Math.min(qRaw, Math.max(0, Math.ceil(dstk - cstk - 1e-9)));
-        else notes.push('Χωρίς επιθυμητό απόθεμα — δεν εφαρμόστηκε όριο.');
-      }
+      // 2) Όριο ασφαλείας (7/11/2026): τρέχον < όριο παραγγελίας → έως το επιθυμητό απόθεμα.
+      //    Συνδυάζεται με τα παραπάνω: κρατιέται η ΜΕΓΑΛΥΤΕΡΗ από τις δύο ποσότητες.
+      let qSafe = 0;
+      if (o.safety && (!o.allowed || o.allowed.has(cd)) && rp > 0 && cstk < rp && dstk > cstk) qSafe = Math.ceil(dstk - cstk - 1e-9);
+      if (qSafe > qSales) notes.push(`Όριο ασφαλείας: τρέχον ${cstk} < όριο ${rp} → έως επιθυμητό ${dstk}` + (qSales > 0 ? ` (από πωλήσεις: ${qSales}).` : '.'));
+      let q = Math.max(qSales, qSafe);
       if (q <= 0) continue; // είδη με ποσότητα 0 δεν μπαίνουν στο Excel
       // στρογγυλοποίηση στο πλησιέστερο κιβώτιο (τουλάχιστον 1)· χωρίς «Ποσότητα» στο είδος → ως έχει
       const qPre = q, pk = o.boxRound ? (packOf[String(x.pid || '').toLowerCase()] || 0) : 0; let boxes = null;
@@ -292,13 +293,13 @@
       ws.headerFooter = { oddFooter: '&L&8' + ws.name + '&R&8Σελίδα &P από &N' };
     };
     const baseTxt = o.avg2y ? 'Μ.Ο. πωλήσεων ίδιας περιόδου στα προηγούμενα έτη' : 'πωλήσεις περιόδου';
-    const qtyRule = o.safety ? 'Όριο ασφαλείας: είδη με τρέχον απόθεμα κάτω από το «Όριο παραγγελίας» του SimplyPOS · Ποσότητα = επιθυμητό απόθεμα − τρέχον απόθεμα' : o.subStock ? `Ποσότητα = ${baseTxt} − τρέχον απόθεμα (στρογγυλοποίηση προς τα πάνω)` : `Ποσότητα = ${baseTxt} (χωρίς αφαίρεση αποθέματος, στρογγυλοποίηση προς τα πάνω)`;
+    const qtyRule0 = o.subStock ? `Ποσότητα = ${baseTxt} − τρέχον απόθεμα (στρογγυλοποίηση προς τα πάνω)` : `Ποσότητα = ${baseTxt} (χωρίς αφαίρεση αποθέματος, στρογγυλοποίηση προς τα πάνω)`;
+    const qtyRule = qtyRule0 + (o.safety ? ' · + Όριο ασφαλείας: όπου τρέχον < «Όριο παραγγελίας», τουλάχιστον έως το επιθυμητό απόθεμα (κρατιέται η μεγαλύτερη ποσότητα)' : '');
     const printTxt = { summary: 'ΣΥΝΟΨΗ (φύλλο Σύνοψη)', all: 'ΣΥΝΟΛΙΚΗ (φύλλο Δεδομένα)', vendors: 'ΠΡΟΜΗΘΕΥΤΕΣ (ένα φύλλο ανά προμηθευτή)' };
     const settingsTxt = [
       ['Κατάστημα', meta.active.name],
       ['Περίοδος πωλήσεων', `${isoToGr(o.from)} – ${isoToGr(o.to)}`],
-      o.safety ? ['Όριο ασφαλείας', 'ΝΑΙ — τρέχον < όριο παραγγελίας → παραγγελία έως το επιθυμητό απόθεμα (οι ρυθμίσεις πωλήσεων δεν εφαρμόζονται)']
-        : ['Αφαίρεση τρέχοντος αποθέματος', o.subStock ? 'ΝΑΙ' : 'ΟΧΙ (ποσότητα = πωλήσεις)'],
+      ['Αφαίρεση τρέχοντος αποθέματος', (o.subStock ? 'ΝΑΙ' : 'ΟΧΙ (ποσότητα = πωλήσεις)') + (o.safety ? ' · Όριο ασφαλείας: ΝΑΙ (τρέχον < όριο παραγγελίας → έως επιθυμητό, κρατιέται η μεγαλύτερη ποσότητα)' : '')],
       ['Μ.Ο. πωλήσεων ίδιας περιόδου (έως 5 προηγούμενα έτη)', o.avg2y ? `ΝΑΙ — ${periods.yrs.join(' · ')} · διαιρείται με όσα έτη είχε πωλήσεις το είδος` : 'ΟΧΙ'],
       ['Φθηνότερος προμηθευτής', o.cheapest ? 'ΝΑΙ' : (o.vendor ? 'ΟΧΙ — είδη με κύριο προμηθευτή: ' + (meta.vendors[o.vendor] || o.vendor) : 'ΟΧΙ (κύριος προμηθευτής κάθε είδους)')],
       ['Παραγγελία μόνο αν πωλήσεις >', `${o.minSales} τεμ.`],
@@ -548,7 +549,7 @@
       <div class="fld"><span class="lbl"><span class="num">6</span>Υπέρβαση επιθυμητού αποθέματος</span>${seg('overDesired', saved.overDesired ?? true)}
         <div class="hint">ΟΧΙ: η παραγγελία κόβεται ώστε τρέχον + παραγγελία ≤ επιθυμητό απόθεμα.</div></div>
       <div class="fld"><span class="lbl">🛡️ Όριο ασφαλείας</span>${seg('safety', saved.safety ?? false)}
-        <div class="hint">ΝΑΙ: παραγγέλνονται μόνο τα είδη που το τρέχον απόθεμα είναι <b>κάτω από το «Όριο παραγγελίας»</b> του SimplyPOS, με ποσότητα <b>έως το επιθυμητό απόθεμα</b> (επιθυμητό − τρέχον). Οι πωλήσεις και τα πεδία 1, 2, 4, 5, 6 δεν μετράνε. Προμηθευτής, κατασκευαστής, φθηνότερος, κιβώτια και καταχώρηση ισχύουν κανονικά.</div></div>
+        <div class="hint">ΝΑΙ: παραγγέλνονται μόνο τα είδη που το τρέχον απόθεμα είναι <b>κάτω από το «Όριο παραγγελίας»</b> του SimplyPOS, με ποσότητα <b>έως το επιθυμητό απόθεμα</b> (επιθυμητό − τρέχον). Συνδυάζεται με τα πεδία 1–9: αν ένα είδος βγαίνει και από τις πωλήσεις, κρατιέται η μεγαλύτερη ποσότητα. Τα κουμπιά «Γρήγορης παραγγελίας» δεν το χρησιμοποιούν.</div></div>
       <div class="fld"><span class="lbl"><span class="num">7</span>Εκτύπωση (A4)</span><select id="spo-print">
           <option value="summary">1. ΣΥΝΟΨΗ — φύλλο Σύνοψη</option>
           <option value="all">2. ΣΥΝΟΛΙΚΗ — φύλλο Δεδομένα (όλα τα είδη)</option>
