@@ -536,8 +536,6 @@
         <div class="hint" id="spo-avg-hint">ΝΑΙ: βάση = μέσος όρος πωλήσεων των ίδιων ημερομηνιών στα 5 προηγούμενα έτη. Διαιρείται μόνο με τα έτη που το είδος είχε πωλήσεις (π.χ. πωλήσεις σε 3 έτη → Μ.Ο. 3 ετών).</div></div>
       <div class="fld"><span class="lbl"><span class="num">6</span>Υπέρβαση επιθυμητού αποθέματος</span>${seg('overDesired', saved.overDesired ?? true)}
         <div class="hint">ΟΧΙ: η παραγγελία κόβεται ώστε τρέχον + παραγγελία ≤ επιθυμητό απόθεμα.</div></div>
-      <div class="fld"><span class="lbl">Προμηθευτής (προαιρετικό)</span><select id="spo-vendor"><option value="">Όλοι οι προμηθευτές</option></select>
-        <div class="hint">Με «Φθηνότερος = ΟΧΙ»: μόνο τα είδη που έχουν αυτόν τον προμηθευτή ως κύριο στο SimplyPOS. Με «ΝΑΙ»: μόνο όσα είναι φθηνότερα σε αυτόν.</div></div>
       <div class="fld"><span class="lbl"><span class="num">7</span>Εκτύπωση (A4)</span><select id="spo-print">
           <option value="summary">1. ΣΥΝΟΨΗ — φύλλο Σύνοψη</option>
           <option value="all">2. ΣΥΝΟΛΙΚΗ — φύλλο Δεδομένα (όλα τα είδη)</option>
@@ -554,6 +552,8 @@
       <div class="fld"><span class="lbl">Κατασκευαστής (προαιρετικό)</span><select id="spo-brand"><option value="">Όλοι οι κατασκευαστές</option></select>
         <div class="hint">Μόνο είδη αυτού του κατασκευαστή (όπως είναι δηλωμένος στο είδος στο SimplyPOS).</div></div>
       <button type="button" class="go" id="spo-go" disabled>ΔΗΜΙΟΥΡΓΙΑ EXCEL</button></details>
+      <div class="fld"><span class="lbl">Προμηθευτής (προαιρετικό)</span><select id="spo-vendor"><option value="">Όλοι οι προμηθευτές</option></select>
+        <div class="hint">Με «Φθηνότερος = ΟΧΙ»: μόνο τα είδη που έχουν αυτόν τον προμηθευτή ως κύριο στο SimplyPOS. Με «ΝΑΙ»: μόνο όσα είναι φθηνότερα σε αυτόν.</div></div>
       <div class="msg" id="spo-msg"></div>
     </div>
     <div class="ft">Μόνο ανάγνωση — δεν καταχωρείται τίποτα στο SimplyPOS. Excel με τελικούς αριθμούς, γκρι στήλη ποσότητας και κίτρινο κελί διαγραφής στη «Σύνοψη». Για άλλο κατάστημα, αλλάξτε το κατάστημα στο SimplyPOS και ανοίξτε ξανά.</div>`;
