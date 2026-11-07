@@ -163,7 +163,8 @@
     sYs = sYs || [];
     brandOf = brandOf || {}; packOf = packOf || {};
     const vname = (v) => (v == null || v === '' ? '' : (meta.vendors[v] || ('Προμηθευτής #' + v)));
-    const codes = new Set([...Object.keys(sCur), ...sYs.flatMap((m) => Object.keys(m))]);
+    // Όριο ασφαλείας: εξετάζονται ΟΛΑ τα είδη του καταστήματος (όχι μόνο όσα πουλήθηκαν)
+    const codes = o.safety ? new Set(P.map((x) => String(x.cd))) : new Set([...Object.keys(sCur), ...sYs.flatMap((m) => Object.keys(m))]);
     const byCd = {}; P.forEach((x) => { byCd[String(x.cd)] = x; });
     const rows = [], skippedNoCost = [], unknown = [];
     for (const cd of codes) {
@@ -175,12 +176,21 @@
       const yv = sYs.map((m) => m[cd] || 0), yN = yv.filter((v) => v > 0).length;
       const yAvg = yN ? yv.reduce((a, v) => a + v, 0) / yN : 0;
       const base = o.avg2y ? yAvg : cur;
-      if (!(base > o.minSales)) continue;
-      const cstk = Number(x.cstk) || 0, dstk = Number(x.dstk) || 0;
-      const qRaw = Math.max(0, Math.ceil((o.subStock ? base - cstk : base) - 1e-9));
-      let q = qRaw; const notes = [];
-      if (o.avg2y && yN) notes.push('Μ.Ο. ' + yN + (yN === 1 ? ' έτους' : ' ετών') + ' (' + yv.map((v, i) => (o.yearsLbl ? o.yearsLbl[i] : 'έτος -' + (i + 1)) + ': ' + Math.round(v * 100) / 100).join(', ') + ').');
-      if (!o.overDesired) {
+      const cstk = Number(x.cstk) || 0, dstk = Number(x.dstk) || 0, rp = Number(x.rstk) || 0;   // rstk = «Όριο παραγγελίας» στο SimplyPOS
+      let qRaw; const notes = [];
+      if (o.safety) {
+        // Όριο ασφαλείας (7/11/2026): τρέχον < όριο παραγγελίας → παραγγελία έως το επιθυμητό απόθεμα
+        if (o.allowed && !o.allowed.has(cd)) continue;
+        if (!(rp > 0 && cstk < rp && dstk > cstk)) continue;
+        qRaw = Math.ceil(dstk - cstk - 1e-9);
+        notes.push(`Όριο ασφαλείας: τρέχον ${cstk} < όριο ${rp} → έως επιθυμητό ${dstk}.`);
+      } else {
+        if (!(base > o.minSales)) continue;
+        qRaw = Math.max(0, Math.ceil((o.subStock ? base - cstk : base) - 1e-9));
+      }
+      let q = qRaw;
+      if (!o.safety && o.avg2y && yN) notes.push('Μ.Ο. ' + yN + (yN === 1 ? ' έτους' : ' ετών') + ' (' + yv.map((v, i) => (o.yearsLbl ? o.yearsLbl[i] : 'έτος -' + (i + 1)) + ': ' + Math.round(v * 100) / 100).join(', ') + ').');
+      if (!o.safety && !o.overDesired) {
         if (dstk > 0) q = Math.min(qRaw, Math.max(0, Math.ceil(dstk - cstk - 1e-9)));
         else notes.push('Χωρίς επιθυμητό απόθεμα — δεν εφαρμόστηκε όριο.');
       }
@@ -233,7 +243,7 @@
       const mnet = main ? r4(main.net) : (mainCost > 0 ? r4(mainCost) : null);
       rows.push({
         cd, scl: (x.sCdList || []).map((s) => [String(s.vid), s.code || '']),
-        bcs: [...new Set([...(x.bCdList || []).map((b) => b.bCd), x.bCd || ''].filter((b) => /^\d{8,14}$/.test(String(b))))], pid: x.pid ? String(x.pid).toLowerCase() : '', pk: pk || '', boxes, qPre, nm: String(x.nm || '').trim(), br, cur, yAvg, yN, base, cstk, dstk, q, vat,
+        bcs: [...new Set([...(x.bCdList || []).map((b) => b.bCd), x.bCd || ''].filter((b) => /^\d{8,14}$/.test(String(b))))], pid: x.pid ? String(x.pid).toLowerCase() : '', pk: pk || '', boxes, qPre, nm: String(x.nm || '').trim(), br, cur, yAvg, yN, base, cstk, dstk, rp, q, vat,
         vid: String(pick.vid), vn: vname(pick.vid), code: pick.code || (x.sCdList || []).find((s) => String(s.vid) === String(pick.vid))?.code || '',
         cost: pick.cost, disc: pick.disc / 100, net, val, gross,
         mvn: vname(mainVid), mnet, save: mnet == null ? null : r2((mnet - net) * q), note: notes.join(' ')
@@ -282,12 +292,13 @@
       ws.headerFooter = { oddFooter: '&L&8' + ws.name + '&R&8Σελίδα &P από &N' };
     };
     const baseTxt = o.avg2y ? 'Μ.Ο. πωλήσεων ίδιας περιόδου στα προηγούμενα έτη' : 'πωλήσεις περιόδου';
-    const qtyRule = o.subStock ? `Ποσότητα = ${baseTxt} − τρέχον απόθεμα (στρογγυλοποίηση προς τα πάνω)` : `Ποσότητα = ${baseTxt} (χωρίς αφαίρεση αποθέματος, στρογγυλοποίηση προς τα πάνω)`;
+    const qtyRule = o.safety ? 'Όριο ασφαλείας: είδη με τρέχον απόθεμα κάτω από το «Όριο παραγγελίας» του SimplyPOS · Ποσότητα = επιθυμητό απόθεμα − τρέχον απόθεμα' : o.subStock ? `Ποσότητα = ${baseTxt} − τρέχον απόθεμα (στρογγυλοποίηση προς τα πάνω)` : `Ποσότητα = ${baseTxt} (χωρίς αφαίρεση αποθέματος, στρογγυλοποίηση προς τα πάνω)`;
     const printTxt = { summary: 'ΣΥΝΟΨΗ (φύλλο Σύνοψη)', all: 'ΣΥΝΟΛΙΚΗ (φύλλο Δεδομένα)', vendors: 'ΠΡΟΜΗΘΕΥΤΕΣ (ένα φύλλο ανά προμηθευτή)' };
     const settingsTxt = [
       ['Κατάστημα', meta.active.name],
       ['Περίοδος πωλήσεων', `${isoToGr(o.from)} – ${isoToGr(o.to)}`],
-      ['Αφαίρεση τρέχοντος αποθέματος', o.subStock ? 'ΝΑΙ' : 'ΟΧΙ (ποσότητα = πωλήσεις)'],
+      o.safety ? ['Όριο ασφαλείας', 'ΝΑΙ — τρέχον < όριο παραγγελίας → παραγγελία έως το επιθυμητό απόθεμα (οι ρυθμίσεις πωλήσεων δεν εφαρμόζονται)']
+        : ['Αφαίρεση τρέχοντος αποθέματος', o.subStock ? 'ΝΑΙ' : 'ΟΧΙ (ποσότητα = πωλήσεις)'],
       ['Μ.Ο. πωλήσεων ίδιας περιόδου (έως 5 προηγούμενα έτη)', o.avg2y ? `ΝΑΙ — ${periods.yrs.join(' · ')} · διαιρείται με όσα έτη είχε πωλήσεις το είδος` : 'ΟΧΙ'],
       ['Φθηνότερος προμηθευτής', o.cheapest ? 'ΝΑΙ' : (o.vendor ? 'ΟΧΙ — είδη με κύριο προμηθευτή: ' + (meta.vendors[o.vendor] || o.vendor) : 'ΟΧΙ (κύριος προμηθευτής κάθε είδους)')],
       ['Παραγγελία μόνο αν πωλήσεις >', `${o.minSales} τεμ.`],
@@ -536,6 +547,8 @@
         <div class="hint" id="spo-avg-hint">ΝΑΙ: βάση = μέσος όρος πωλήσεων των ίδιων ημερομηνιών στα 5 προηγούμενα έτη. Διαιρείται μόνο με τα έτη που το είδος είχε πωλήσεις (π.χ. πωλήσεις σε 3 έτη → Μ.Ο. 3 ετών).</div></div>
       <div class="fld"><span class="lbl"><span class="num">6</span>Υπέρβαση επιθυμητού αποθέματος</span>${seg('overDesired', saved.overDesired ?? true)}
         <div class="hint">ΟΧΙ: η παραγγελία κόβεται ώστε τρέχον + παραγγελία ≤ επιθυμητό απόθεμα.</div></div>
+      <div class="fld"><span class="lbl">🛡️ Όριο ασφαλείας</span>${seg('safety', saved.safety ?? false)}
+        <div class="hint">ΝΑΙ: παραγγέλνονται μόνο τα είδη που το τρέχον απόθεμα είναι <b>κάτω από το «Όριο παραγγελίας»</b> του SimplyPOS, με ποσότητα <b>έως το επιθυμητό απόθεμα</b> (επιθυμητό − τρέχον). Οι πωλήσεις και τα πεδία 1, 2, 4, 5, 6 δεν μετράνε. Προμηθευτής, κατασκευαστής, φθηνότερος, κιβώτια και καταχώρηση ισχύουν κανονικά.</div></div>
       <div class="fld"><span class="lbl"><span class="num">7</span>Εκτύπωση (A4)</span><select id="spo-print">
           <option value="summary">1. ΣΥΝΟΨΗ — φύλλο Σύνοψη</option>
           <option value="all">2. ΣΥΝΟΛΙΚΗ — φύλλο Δεδομένα (όλα τα είδη)</option>
@@ -563,7 +576,7 @@
     const segVal = (k) => panel.querySelector(`.seg[data-key="${k}"] button.on`)?.dataset.v === '1';
     return { from: $id('spo-from').value, to: $id('spo-to').value, subStock: segVal('subStock'), cheapest: segVal('cheapest'), avg2y: segVal('avg2y'),
              overDesired: segVal('overDesired'), minSales: Math.max(0, Number($id('spo-min').value) || 0), vendor: $id('spo-vendor').value,
-             brand: $id('spo-brand').value, print: $id('spo-print').value, boxRound: segVal('boxRound'), send: $id('spo-send').value };
+             brand: $id('spo-brand').value, print: $id('spo-print').value, boxRound: segVal('boxRound'), safety: segVal('safety'), send: $id('spo-send').value };
   };
   panel.addEventListener('click', (e) => {
     const b = e.target.closest('button'); if (!b) return;
@@ -623,7 +636,8 @@
       const allowed = new Set(P.filter((x) => x.pid && bIds.has(String(x.pid).toLowerCase())).map((x) => String(x.cd)));
       [sCur, ...sYs].forEach((s) => Object.keys(s.q).forEach((k) => { if (!allowed.has(k)) delete s.q[k]; }));
       allowed.forEach((k) => { brandOf[k] = meta.brandName[bid]; });
-    }
+      o.allowed = allowed;
+    } else o.allowed = null;
     const sYq = sYs.map((s) => s.q);
     let res = compute(o, meta, P, sCur.q, sYq, brandOf);
     if (o.boxRound && res.rows.length) {
@@ -638,7 +652,7 @@
     const short = meta.active.name.replace(/^NIKOLAS NAOUSA\s*/i, '').replace(/[^\wΑ-Ωα-ω]+/g, '_') || 'STORE';
     const vtag = (o.vendor ? '_' + (meta.vendors[o.vendor] || o.vendor).replace(/[^\wΑ-Ωα-ω]+/g, '_').slice(0, 20) : '') +
                  (o.brand ? '_' + (meta.brandName[o.brand] || o.brand).replace(/[^\wΑ-Ωα-ω]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 20) : '');
-    const fname = `Paraggelia_${short}${vtag}_${o.from.replace(/-/g, '')}-${o.to.replace(/-/g, '')}${o.cheapest ? '_fthinoteroi' : ''}.xlsx`;
+    const fname = `Paraggelia_${short}${vtag}_${o.from.replace(/-/g, '')}-${o.to.replace(/-/g, '')}${o.cheapest ? '_fthinoteroi' : ''}${o.safety ? '_orio_asfaleias' : ''}.xlsx`;
     if (download) {
       const blob = new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
       const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = fname; document.body.appendChild(a); a.click();
@@ -680,6 +694,7 @@
     $id('spo-vendor').value = sd ? sd.vid : '';
     $id('spo-send').value = sd ? q : '';
     if (sd) { const sg = panel.querySelector('.seg[data-key="cheapest"]'); [...sg.children].forEach((x) => x.classList.toggle('on', x.dataset.v === '0')); }
+    { const sg = panel.querySelector('.seg[data-key="safety"]'); [...sg.children].forEach((x) => x.classList.toggle('on', x.dataset.v === '0')); }   // γρήγορα κουμπιά = πάντα με πωλήσεις
     $id('spo-min').value = (sd && sd.minSales != null) ? sd.minSales : 0;   // όλα τα γρήγορα κουμπιά: πεδίο 4 = 0 (30/10/2026)
     // το παράθυρο ανοίγει ΤΩΡΑ (με το πάτημα), αλλιώς ο browser το μπλοκάρει· η διεύθυνση μπαίνει όταν είναι έτοιμη η παραγγελία
     let win = null; if (sd && !(sd.email && hookUrl())) { try { win = window.open('about:blank', '_blank'); if (win) win.document.write('<p style="font:16px Arial;padding:20px">Ετοιμάζεται η παραγγελία από το SimplyPOS…</p>'); } catch (e) { win = null; } }
