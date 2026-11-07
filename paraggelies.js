@@ -491,6 +491,13 @@
   #${PID} td.r{text-align:right;white-space:nowrap}
   #${PID} .big{font-size:15px;font-weight:bold}
   #${PID} .quick{background:#f0f7f1;border:1px solid #cfe5d3;border-radius:10px;padding:10px;margin-bottom:12px}
+  #${PID} details.quick>summary{list-style:none;display:flex;align-items:center;gap:8px;padding:12px 10px;margin:-10px;border-radius:10px;background:#2e7d32;color:#fff;font-size:15px}
+  #${PID} details.quick>summary::-webkit-details-marker{display:none}
+  #${PID} details.quick>summary .ar{margin-left:auto;transition:transform .15s}
+  #${PID} details.quick[open]>summary{margin-bottom:8px;border-radius:10px 10px 0 0}
+  #${PID} details.quick[open]>summary .ar{transform:rotate(90deg)}
+  #${PID} details.quick>summary .ic::before{content:'📁'}
+  #${PID} details.quick[open]>summary .ic::before{content:'📂'}
   #${PID} .qb{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
   #${PID} .qb button{flex:1 1 45%;padding:12px 6px;border:0;border-radius:10px;background:#2e7d32;color:#fff;font-weight:bold;font-size:14px;cursor:pointer}
   #${PID} .qb button[data-q=excel]{background:#1F4E78}
@@ -508,10 +515,10 @@
     <div class="hd"><b>📦 Παραγγελίες</b><button type="button" title="Κλείσιμο" data-act="close">×</button></div>
     <div class="bd">
       <div class="st" id="spo-store">Φόρτωση στοιχείων SimplyPOS…</div>
-      <div class="quick"><div class="lbl">⚡ Γρήγορη παραγγελία — πωλήσεις τελευταίων 7 ημερών</div>
+      <details class="quick" id="spo-quick"${store.get('quickOpen', false) ? ' open' : ''}><summary><span class="ic"></span>Γρήγορη παραγγελία <span style="font-weight:normal;font-size:12px;opacity:.85">— πωλήσεις 7 ημερών</span><span class="ar">›</span></summary>
         <div class="qb"><button type="button" data-q="ragousis" disabled>🛒 ΡΑΓΚΟΥΣΗΣ</button><button type="button" data-q="mmm" disabled>🛒 Mmmgroup</button><button type="button" data-q="mas" disabled>🛒 ΜΑΣΟΥΤΗΣ</button>
         <button type="button" data-q="zoumis" disabled>✉️ ΖΟΥΜΗΣ</button><button type="button" data-q="michalios" disabled>✉️ ΜΙΧΑΛΙΟΣ</button><button type="button" data-q="mietsel" disabled>✉️ ΜΙΕΤΣΕΛ</button><button type="button" data-q="marinopoulos" disabled>✉️ ΜΑΡΙΝΟΠΟΥΛΟΣ</button><button type="button" data-q="stefanidis" disabled>✉️ ΣΤΕΦΑΝΙΔΗΣ</button><button type="button" data-q="asteras" disabled>✉️ ASTERAS</button><button type="button" data-q="excel" disabled>📄 Μόνο Excel</button></div>
-        <div class="hint">Ένα πάτημα: φτιάχνει το Excel και ανοίγει το site του προμηθευτή. Εκεί πατάτε <b>μία φορά</b> τον σελιδοδείκτη και η παραγγελία μπαίνει στο καλάθι. <b>Κουμπιά ✉️</b>: η παραγγελία πάει με e-mail από rrms2021@gmail.com (με αυτόματη αποστολή: αμέσως· αλλιώς ανοίγει έτοιμο μήνυμα στο Gmail). «Μόνο Excel» = όλοι οι προμηθευτές.</div></div>
+        <div class="hint">Ένα πάτημα: φτιάχνει το Excel και ανοίγει το site του προμηθευτή. Εκεί πατάτε <b>μία φορά</b> τον σελιδοδείκτη και η παραγγελία μπαίνει στο καλάθι. <b>Κουμπιά ✉️</b>: η παραγγελία πάει με e-mail από rrms2021@gmail.com (με αυτόματη αποστολή: αμέσως· αλλιώς ανοίγει έτοιμο μήνυμα στο Gmail). «Μόνο Excel» = όλοι οι προμηθευτές.</div></details>
       <details id="spo-adv"><summary>⚙️ Ρυθμίσεις (για προχωρημένους)</summary>
       <div class="fld" style="margin-top:10px"><span class="lbl"><span class="num">1</span>Ημερομηνίες πωλήσεων (από – έως)</span>
         <div class="row2"><input type="date" id="spo-from" value="${isoOf(f0)}"><input type="date" id="spo-to" value="${isoOf(y)}"></div>
@@ -660,6 +667,9 @@
       hookSt(); $id('spo-hook-st').insertAdjacentHTML('beforeend', ' (έλεγχος OK — δεν στάλθηκε τίποτα)');
     } catch (e) { $id('spo-hook-st').innerHTML = '<b style="color:#b71c1c">Η σύνδεση απέτυχε: ' + esc(e.message || e) + '.</b> Ελέγξτε ότι η δημοσίευση είναι «Web app», «Execute as: Me», «Who has access: Anyone».'; }
   });
+
+  // φάκελος «Γρήγορη παραγγελία»: θυμάται αν ήταν ανοιχτός (7/11/2026)
+  $id('spo-quick').addEventListener('toggle', () => { store.set('quickOpen', $id('spo-quick').open); });
 
   // Γρήγορα κουμπιά: τελευταίες 7 ημέρες, ο προμηθευτής, «Φθηνότερος = ΟΧΙ», όλοι οι κατασκευαστές, καταχώρηση στο site
   panel.querySelectorAll('.qb button').forEach((b) => b.addEventListener('click', () => {
