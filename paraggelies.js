@@ -551,9 +551,9 @@
         <div class="hint" id="spo-hook-st"></div></div>
       <div class="fld"><span class="lbl">Κατασκευαστής (προαιρετικό)</span><select id="spo-brand"><option value="">Όλοι οι κατασκευαστές</option></select>
         <div class="hint">Μόνο είδη αυτού του κατασκευαστή (όπως είναι δηλωμένος στο είδος στο SimplyPOS).</div></div>
-      <button type="button" class="go" id="spo-go" disabled>ΔΗΜΙΟΥΡΓΙΑ EXCEL</button></details>
       <div class="fld"><span class="lbl">Προμηθευτής (προαιρετικό)</span><select id="spo-vendor"><option value="">Όλοι οι προμηθευτές</option></select>
         <div class="hint">Με «Φθηνότερος = ΟΧΙ»: μόνο τα είδη που έχουν αυτόν τον προμηθευτή ως κύριο στο SimplyPOS. Με «ΝΑΙ»: μόνο όσα είναι φθηνότερα σε αυτόν.</div></div>
+      <button type="button" class="go" id="spo-go" disabled>ΔΗΜΙΟΥΡΓΙΑ EXCEL</button></details>
       <div class="msg" id="spo-msg"></div>
     </div>
     <div class="ft">Μόνο ανάγνωση — δεν καταχωρείται τίποτα στο SimplyPOS. Excel με τελικούς αριθμούς, γκρι στήλη ποσότητας και κίτρινο κελί διαγραφής στη «Σύνοψη». Για άλλο κατάστημα, αλλάξτε το κατάστημα στο SimplyPOS και ανοίξτε ξανά.</div>`;
