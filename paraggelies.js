@@ -320,7 +320,7 @@
     // T Εξοικονόμηση · U Σημείωση · V Κατασκευαστής · W Α/Α (φίλτρο) · X Κλειδί (φίλτρο)
     dt.getCell('A1').value = `Παραγγελίες — ${meta.active.name} — πωλήσεις ${isoToGr(o.from)}–${isoToGr(o.to)}`;
     dt.getCell('A1').font = { name: F, bold: true, size: 14 };
-    dt.getCell('A2').value = 'Όλοι οι αριθμοί είναι τελικοί (χωρίς υπολογισμούς). Γκρι στήλη C = ποσότητα παραγγελίας. Διαγραφή γραμμών: κίτρινο κελί στη «Σύνοψη».';
+    dt.getCell('A2').value = 'Γκρι στήλη C = ποσότητα παραγγελίας: αν την αλλάξετε, το «Σύνολο με ΦΠΑ» και η «Καθαρή αξία» υπολογίζονται ξανά. Διαγραφή γραμμών: κίτρινο κελί στη «Σύνοψη».';
     dt.getCell('A2').font = { name: F, italic: true };
     dt.getCell('A3').value = stampTxt;
     dt.getCell('A3').font = { name: F, size: 9, color: { argb: 'FF595959' } };
@@ -339,6 +339,10 @@
       const row = dt.getRow(n);
       vals.forEach((v, j) => { const c = row.getCell(j + 1); c.value = v; c.border = border; c.font = BLACK; });
       const qc = row.getCell(3); fillGrey(qc); qc.font = { name: F, bold: true };
+      // Τα ποσά ακολουθούν την ποσότητα της γκρι στήλης C: αν αλλάξετε ποσότητα, αλλάζει και το κόστος της παραγγελίας
+      row.getCell(4).value = { formula: `ROUND(C${n}*O${n}*(1+Q${n}),2)`, result: r.gross };
+      row.getCell(16).value = { formula: `ROUND(C${n}*O${n},2)`, result: r.val };
+      if (r.save != null) row.getCell(20).value = { formula: `IF(S${n}="","",ROUND((S${n}-O${n})*C${n},2))`, result: r.save };
       [[3, QTY], [4, EUR], [7, QTY], [8, '#,##0.0'], [9, QTY], [10, '#,##0.0'], [11, QTY], [12, QTY], [13, EUR4], [14, PCT], [15, EUR4], [16, EUR], [17, PCT], [19, EUR4], [20, EUR]]
         .forEach(([j, f]) => { row.getCell(j).numFmt = f; });
       const nc = row.getCell(21); nc.alignment = { wrapText: true, vertical: 'top' };
@@ -354,10 +358,10 @@
     if (res.rows.length) {
       tRow.getCell(1).value = 'ΣΥΝΟΛΟ';
       tRow.getCell(2).value = 'Γραμμές: ' + res.rows.length;
-      tRow.getCell(3).value = sumRes((r) => r.q);
-      tRow.getCell(4).value = r2(sumRes((r) => r.gross));
-      tRow.getCell(16).value = r2(sumRes((r) => r.val));
-      tRow.getCell(20).value = r2(sumRes((r) => r.save || 0));
+      tRow.getCell(3).value = { formula: `SUM(C${S}:C${E})`, result: sumRes((r) => r.q) };
+      tRow.getCell(4).value = { formula: `SUM(D${S}:D${E})`, result: r2(sumRes((r) => r.gross)) };
+      tRow.getCell(16).value = { formula: `SUM(P${S}:P${E})`, result: r2(sumRes((r) => r.val)) };
+      tRow.getCell(20).value = { formula: `SUM(T${S}:T${E})`, result: r2(sumRes((r) => r.save || 0)) };
       for (let j = 1; j <= 22; j++) { const c = tRow.getCell(j); c.font = { name: F, bold: true }; c.border = border; c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: TOT } }; }
       fillGrey(tRow.getCell(3));
       [[3, QTY], [4, EUR], [16, EUR], [20, EUR]].forEach(([j, f]) => { tRow.getCell(j).numFmt = f; });
@@ -425,7 +429,7 @@
     dc.dataValidation = { type: 'list', allowBlank: false, formulae: ['"0,1,2,3,4,5,10,20,50"'], showErrorMessage: false,
       showInputMessage: true, promptTitle: 'Διαγραφή', prompt: 'Αφαιρούνται οι γραμμές με ποσότητα παραγγελίας μικρότερη ή ίση με αυτή την τιμή (σε όλα τα φύλλα προμηθευτών). Μπορείτε να γράψετε και άλλο αριθμό.' };
     sm.getCell(`C${SM_DEL}`).value = '◄ επιλέξτε (0 = όλα)'; sm.getCell(`C${SM_DEL}`).font = { name: F, size: 9, color: { argb: 'FF595959' } };
-    sm.getCell(`A${SM_DEL + 1}`).value = `${qtyRule}. Καθαρό κόστος = τιμή × (1 − έκπτωση). Όλα τελικοί αριθμοί, χωρίς υπολογισμούς.`;
+    sm.getCell(`A${SM_DEL + 1}`).value = `${qtyRule}. Καθαρό κόστος = τιμή × (1 − έκπτωση). Σύνολο με ΦΠΑ = ποσότητα × καθαρό κόστος × (1 + ΦΠΑ) — αλλάζει μόνο του αν αλλάξετε την ποσότητα.`;
     sm.getCell(`A${SM_DEL + 1}`).font = { name: F, italic: true, size: 10 };
     sm.getCell(`A${SM_DEL + 2}`).value = stampTxt; sm.getCell(`A${SM_DEL + 2}`).font = { name: F, size: 9, color: { argb: 'FF595959' } };
     header(sm, SM_HDR, ['Προμηθευτής', 'Γραμμές', 'Ποσότητα παραγγελίας', 'Σύνολο με ΦΠΑ', 'Καθαρή αξία', 'Εξοικονόμηση έναντι κύριου', 'Φύλλο'], [34, 30, 13, 15, 14, 16, 30]);
