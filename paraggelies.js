@@ -163,7 +163,8 @@
     sYs = sYs || [];
     brandOf = brandOf || {}; packOf = packOf || {};
     const vname = (v) => (v == null || v === '' ? '' : (meta.vendors[v] || ('Προμηθευτής #' + v)));
-    const codes = new Set([...Object.keys(sCur), ...sYs.flatMap((m) => Object.keys(m))]);
+    // Όριο ασφαλείας: εξετάζονται ΚΑΙ τα είδη χωρίς πωλήσεις (όλα τα είδη του καταστήματος)
+    const codes = new Set([...Object.keys(sCur), ...sYs.flatMap((m) => Object.keys(m)), ...(o.safety ? P.map((x) => String(x.cd)) : [])]);
     const byCd = {}; P.forEach((x) => { byCd[String(x.cd)] = x; });
     const rows = [], skippedNoCost = [], unknown = [];
     for (const cd of codes) {
@@ -191,14 +192,18 @@
       // 2) Όριο ασφαλείας (αλλαγή 13/11/2026): τρέχον < όριο παραγγελίας → ποσότητα = πωλήσεις της περιόδου του πεδίου 1
       //    (όλα τα ταμεία του καταστήματος), με/χωρίς αφαίρεση τρέχοντος αποθέματος όπως το πεδίο 2.
       //    Χωρίς το φίλτρο του πεδίου 4 και χωρίς όριο επιθυμητού. Κρατιέται η ΜΕΓΑΛΥΤΕΡΗ από τις δύο ποσότητες.
-      let qSafe = 0;
-      if (o.safety && (!o.allowed || o.allowed.has(cd)) && rp > 0 && cstk < rp && cur > 0) qSafe = Math.max(0, Math.ceil((o.subStock ? cur - cstk : cur) - 1e-9));
+      //    Είδη ΧΩΡΙΣ πωλήσεις στην περίοδο: μπαίνουν στο Excel με ποσότητα 0 και κόκκινη ένδειξη «ΧΩΡΙΣ ΠΩΛΗΣΕΙΣ»
+      //    (δεν πάνε σε e-mail / καλάθι site).
+      let qSafe = 0, ns = false;
+      const below = o.safety && (!o.allowed || o.allowed.has(cd)) && rp > 0 && cstk < rp;
+      if (below && cur > 0) qSafe = Math.max(0, Math.ceil((o.subStock ? cur - cstk : cur) - 1e-9));
+      else if (below && qSales <= 0) { ns = true; notes.push(`ΧΩΡΙΣ ΠΩΛΗΣΕΙΣ στην περίοδο — Όριο ασφαλείας: τρέχον ${cstk} < όριο ${rp}. Ποσότητα 0: συμπληρώστε αν χρειάζεται.`); }
       if (qSafe > qSales) notes.push(`Όριο ασφαλείας: τρέχον ${cstk} < όριο ${rp} → πωλήσεις περιόδου ${Math.round(cur * 100) / 100}` + (o.subStock ? ` − τρέχον ${cstk}` : '') + (qSales > 0 ? ` (από πωλήσεις: ${qSales}).` : '.'));
       let q = Math.max(qSales, qSafe);
-      if (q <= 0) continue; // είδη με ποσότητα 0 δεν μπαίνουν στο Excel
+      if (q <= 0 && !ns) continue; // είδη με ποσότητα 0 δεν μπαίνουν στο Excel (εκτός από «ΧΩΡΙΣ ΠΩΛΗΣΕΙΣ»)
       // στρογγυλοποίηση στο πλησιέστερο κιβώτιο (τουλάχιστον 1)· χωρίς «Ποσότητα» στο είδος → ως έχει
       const qPre = q, pk = o.boxRound ? (packOf[String(x.pid || '').toLowerCase()] || 0) : 0; let boxes = null;
-      if (pk > 0) {
+      if (pk > 0 && q > 0) {
         boxes = Math.max(1, Math.round(q / pk)); q = r4(boxes * pk);
         if (q !== qPre) notes.push(`Στρογγυλοποίηση: ${qPre} τεμ. → ${boxes} κιβ. × ${pk} τεμ.`);
       }
@@ -247,7 +252,7 @@
         bcs: [...new Set([...(x.bCdList || []).map((b) => b.bCd), x.bCd || ''].filter((b) => /^\d{8,14}$/.test(String(b))))], pid: x.pid ? String(x.pid).toLowerCase() : '', pk: pk || '', boxes, qPre, nm: String(x.nm || '').trim(), br, cur, yAvg, yN, base, cstk, dstk, rp, q, vat,
         vid: String(pick.vid), vn: vname(pick.vid), code: pick.code || (x.sCdList || []).find((s) => String(s.vid) === String(pick.vid))?.code || '',
         cost: pick.cost, disc: pick.disc / 100, net, val, gross,
-        mvn: vname(mainVid), mnet, save: mnet == null ? null : r2((mnet - net) * q), note: notes.join(' ')
+        mvn: vname(mainVid), mnet, save: mnet == null ? null : r2((mnet - net) * q), note: notes.join(' '), ns
       });
     }
     const filtered = o.vendor ? rows.filter((r) => r.vid === String(o.vendor)) : rows;
@@ -265,7 +270,7 @@
     const wb = new ExcelJS.Workbook();
     wb.creator = 'Εργαλείο Παραγγελιών SimplyPOS';
     wb.calcProperties.fullCalcOnLoad = true;
-    const F = 'Arial', HDR = 'FF1F4E78', GREY = 'FFD9D9D9', TOT = 'FFDDEBF7', YEL = 'FFFFFF00';
+    const F = 'Arial', ORG = 'FFFF0000', HDR = 'FF1F4E78', GREY = 'FFD9D9D9', TOT = 'FFDDEBF7', YEL = 'FFFFFF00';
     const EUR = '#,##0.00 "€"', EUR4 = '#,##0.0000 "€"', QTY = '#,##0', PCT = '0%';
     const thin = { style: 'thin', color: { argb: 'FFBFBFBF' } }, border = { top: thin, left: thin, bottom: thin, right: thin };
     const med = { style: 'medium', color: { argb: 'FF000000' } };
@@ -328,8 +333,8 @@
       `Πωλήσεις ${periods.cur}`, 'Μ.Ο. ίδιας περιόδου προηγ. ετών', 'Έτη με πωλήσεις (από 5)', 'Βάση (τεμ.)',
       'Τρέχον απόθεμα', 'Επιθυμητό απόθεμα', 'Τιμή καταλόγου', 'Έκπτωση', 'Καθαρό κόστος', 'Καθαρή αξία', 'ΦΠΑ',
       'Κύριος προμηθευτής', 'Καθαρό κόστος κύριου', 'Εξοικονόμηση έναντι κύριου', 'Σημείωση', 'Κατασκευαστής', 'Α/Α (φίλτρο)', 'Κλειδί (φίλτρο)',
-      'Τεμ. ανά κιβώτιο', 'Κιβώτια', 'Ποσότητα πριν τη στρογγυλοποίηση'],
-      [15, 46, 11, 13, 24, 10, 11, 11, 11, 10, 10, 10, 12, 9, 12, 12, 7, 24, 12, 13, 50, 26, 8, 10, 10, 9, 13]);
+      'Τεμ. ανά κιβώτιο', 'Κιβώτια', 'Ποσότητα πριν τη στρογγυλοποίηση', 'Χωρίς πωλήσεις', 'Εμφάνιση (φίλτρο)'],
+      [15, 46, 11, 13, 24, 10, 11, 11, 11, 10, 10, 10, 12, 9, 12, 12, 7, 24, 12, 13, 50, 26, 8, 10, 10, 9, 13, 16, 8]);
     const S = 5, E = Math.max(S, S + res.rows.length - 1);
     const BLACK = { name: F }, HELP = { name: F, size: 8, color: { argb: 'FF808080' } };
     res.rows.forEach((r, i) => {
@@ -348,10 +353,15 @@
       const nc = row.getCell(21); nc.alignment = { wrapText: true, vertical: 'top' };
       if (r.note) nc.font = { name: F, size: 9, color: { argb: 'FFC00000' } };
       const rank = res.rows.slice(0, i + 1).filter((x) => x.vn === r.vn).length;
-      row.getCell(23).value = { formula: `IF(C${n}>${THR},COUNTIFS($E$${S}:E${n},E${n},$C$${S}:C${n},">"&${THR}),"")`, result: rank };
+      row.getCell(23).value = { formula: `IF(AC${n}=1,COUNTIFS($E$${S}:E${n},E${n},$AC$${S}:AC${n},1),"")`, result: rank };
       row.getCell(24).value = { formula: `IF(W${n}="","",E${n}&"|"&W${n})`, result: `${r.vn}|${rank}` };
       row.getCell(23).font = HELP; row.getCell(24).font = HELP;
       [[25, r.pk], [26, r.boxes == null ? '' : r.boxes], [27, r.qPre]].forEach(([j, v]) => { const c = row.getCell(j); c.value = v; c.border = border; c.font = BLACK; c.numFmt = QTY; });
+      // Όριο ασφαλείας χωρίς πωλήσεις: πορτοκαλί «Είδος» + στήλη AB
+      const nsc = row.getCell(28); nsc.value = r.ns ? 'ΧΩΡΙΣ ΠΩΛΗΣΕΙΣ' : ''; nsc.border = border; nsc.font = { name: F, bold: true, color: { argb: 'FFC00000' } };
+      if (r.ns) [1, 2, 3].forEach((j) => { const c = row.getCell(j); c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: ORG } }; c.font = { name: F, bold: true, color: { argb: 'FFFFFFFF' } }; });
+      // φίλτρο εμφάνισης: ποσότητα > κίτρινο κελί, ή «ΧΩΡΙΣ ΠΩΛΗΣΕΙΣ» (φαίνονται πάντα)
+      row.getCell(29).value = { formula: `IF(OR(C${n}>${THR},AB${n}<>""),1,0)`, result: 1 }; row.getCell(29).font = HELP;
     });
     const tRow = dt.getRow(E + 1);
     const sumRes = (k) => res.rows.reduce((a, r) => a + k(r), 0);
@@ -385,9 +395,9 @@
       ws.getCell('A3').value = stampTxt; ws.getCell('A3').font = { name: F, size: 9, color: { argb: 'FF595959' } };
       ws.getCell('A4').value = 'Προμηθευτής:'; ws.getCell('A4').font = { name: F, bold: true };
       ws.getCell('B4').value = vn; ws.getCell('B4').font = { name: F, bold: true };
-      header(ws, 5, ['Κωδ. προμηθευτή', 'Είδος', 'Ποσότητα παραγγελίας', 'Σύνολο με ΦΠΑ', 'Καθαρό κόστος', 'Καθαρή αξία', 'ΦΠΑ', 'Κατασκευαστής', 'Κιβώτια'], [15, 50, 12, 14, 13, 13, 7, 26, 9]);
+      header(ws, 5, ['Κωδ. προμηθευτή', 'Είδος', 'Ποσότητα παραγγελίας', 'Σύνολο με ΦΠΑ', 'Καθαρό κόστος', 'Καθαρή αξία', 'ΦΠΑ', 'Κατασκευαστής', 'Κιβώτια', 'Χωρίς πωλήσεις'], [15, 50, 12, 14, 13, 13, 7, 26, 9, 16]);
       const rs = res.rows.filter((r) => r.vn === vn);
-      const cnt = `COUNTIFS(${D('E')},$B$4,${D('C')},">"&${THR})`;
+      const cnt = `COUNTIFS(${D('E')},$B$4,${D('AC')},1)`;
       rs.forEach((r, k2) => {
         const n = 6 + k2, kk = k2 + 1, row = ws.getRow(n);
         const M = `MATCH($B$4&"|"&${kk},${D('X')},0)`;
@@ -397,12 +407,17 @@
           { formula: g('C'), result: r.q }, { formula: g('D'), result: r.gross },
           { formula: g('O'), result: r.net }, { formula: g('P'), result: r.val },
           { formula: g('Q'), result: r.vat }, { formula: g('V', '&""'), result: r.br || '' },
-          { formula: g('Z', '&""'), result: r.boxes == null ? '' : String(r.boxes) }
+          { formula: g('Z', '&""'), result: r.boxes == null ? '' : String(r.boxes) },
+          { formula: g('AB', '&""'), result: r.ns ? 'ΧΩΡΙΣ ΠΩΛΗΣΕΙΣ' : '' }
         ];
         vals.forEach((v, j) => { const c = row.getCell(j + 1); c.value = v; c.border = border; c.font = BLACK; });
         fillGrey(row.getCell(3)); row.getCell(3).font = { name: F, bold: true };
         [[3, QTY], [4, EUR], [5, EUR4], [6, EUR], [7, PCT]].forEach(([j, f]) => { row.getCell(j).numFmt = f; });
+        row.getCell(10).font = { name: F, bold: true, color: { argb: 'FFC00000' } };
       });
+      // πορτοκαλί «Είδος» όταν το είδος μπήκε από Όριο ασφαλείας χωρίς πωλήσεις (ακολουθεί το φίλτρο διαγραφής)
+      if (rs.length) ws.addConditionalFormatting({ ref: `A6:C${6 + rs.length - 1}`, rules: [{ type: 'expression', priority: 1, formulae: ['$J6<>""'],
+        style: { fill: { type: 'pattern', pattern: 'solid', bgColor: { argb: ORG } }, font: { bold: true, color: { argb: 'FFFFFFFF' } } } }] });
       const e = 6 + Math.max(rs.length, 1) - 1, tr = ws.getRow(e + 1);
       tr.getCell(1).value = 'ΣΥΝΟΛΟ';
       tr.getCell(2).value = { formula: `"Γραμμές: "&${cnt}`, result: 'Γραμμές: ' + rs.length };
@@ -436,7 +451,7 @@
     const T = `$B$${SM_DEL}`;
     res.vorder.forEach((vn, i) => {
       const n = SM_S + i, row = sm.getRow(n), rs = res.rows.filter((r) => r.vn === vn);
-      const cond = `${D('E')},A${n},${D('C')},">"&${T}`;
+      const cond = `${D('E')},A${n},${D('AC')},1`;
       row.getCell(1).value = vn; row.getCell(1).font = BLACK;
       row.getCell(2).value = { formula: `COUNTIFS(${cond})`, result: rs.length };
       row.getCell(3).value = { formula: `SUMIFS(${D('C')},${cond})`, result: rs.reduce((a, r) => a + r.q, 0) };
@@ -553,7 +568,7 @@
       <div class="fld"><span class="lbl"><span class="num">6</span>Υπέρβαση επιθυμητού αποθέματος</span>${seg('overDesired', saved.overDesired ?? true)}
         <div class="hint">ΟΧΙ: η παραγγελία κόβεται ώστε τρέχον + παραγγελία ≤ επιθυμητό απόθεμα.</div></div>
       <div class="fld"><span class="lbl">🛡️ Όριο ασφαλείας</span>${seg('safety', saved.safety ?? false)}
-        <div class="hint">ΝΑΙ: όσα είδη έχουν τρέχον απόθεμα <b>κάτω από το «Όριο παραγγελίας»</b> του SimplyPOS παραγγέλνονται <b>όσο πουλήθηκαν στην περίοδο του πεδίου 1</b> (όλα τα ταμεία του καταστήματος· με αφαίρεση τρέχοντος αποθέματος αν το πεδίο 2 = ΝΑΙ), ακόμα κι αν οι πωλήσεις είναι κάτω από το πεδίο 4. Συνδυάζεται με τα πεδία 1–9: αν ένα είδος βγαίνει και από τις πωλήσεις, κρατιέται η μεγαλύτερη ποσότητα. Τα κουμπιά «Γρήγορης παραγγελίας» δεν το χρησιμοποιούν.</div></div>
+        <div class="hint">ΝΑΙ: όσα είδη έχουν τρέχον απόθεμα <b>κάτω από το «Όριο παραγγελίας»</b> του SimplyPOS παραγγέλνονται <b>όσο πουλήθηκαν στην περίοδο του πεδίου 1</b> (όλα τα ταμεία του καταστήματος· με αφαίρεση τρέχοντος αποθέματος αν το πεδίο 2 = ΝΑΙ), ακόμα κι αν οι πωλήσεις είναι κάτω από το πεδίο 4. Όσα <b>δεν έχουν πωλήσεις</b> μπαίνουν στο Excel με ποσότητα 0, σε κόκκινο («ΧΩΡΙΣ ΠΩΛΗΣΕΙΣ»). Συνδυάζεται με τα πεδία 1–9: αν ένα είδος βγαίνει και από τις πωλήσεις, κρατιέται η μεγαλύτερη ποσότητα. Τα κουμπιά «Γρήγορης παραγγελίας» δεν το χρησιμοποιούν.</div></div>
       <div class="fld"><span class="lbl"><span class="num">7</span>Εκτύπωση (A4)</span><select id="spo-print">
           <option value="summary">1. ΣΥΝΟΨΗ — φύλλο Σύνοψη</option>
           <option value="all">2. ΣΥΝΟΛΙΚΗ — φύλλο Δεδομένα (όλα τα είδη)</option>
@@ -716,23 +731,25 @@
       if (!res.rows.length) { msg('Δεν βγήκε καμία γραμμή παραγγελίας με αυτές τις επιλογές. Το Excel κατέβηκε κενό.'); }
       else msg(`<div class="big">✔ ${esc(fname)}</div>
         <div>${res.rows.length} είδη · ${fmtInt(sum((r) => r.q))} τεμ. · ${res.vorder.length} προμηθευτές</div>
+        ${res.rows.some((r) => r.ns) ? `<div style="margin-top:4px;padding:6px 8px;border-radius:6px;background:#fde2e2;color:#b71c1c">⚠ <b>${res.rows.filter((r) => r.ns).length} είδη κάτω από το όριο χωρίς πωλήσεις</b> — στο Excel με ποσότητα 0, σε κόκκινο. Δεν πάνε σε e-mail / καλάθι.</div>` : ''}
         <div>Καθαρή αξία <b>${fmtEur(sum((r) => r.val))}</b> · με ΦΠΑ <b>${fmtEur(sum((r) => r.gross))}</b></div>
         <table>${res.vorder.slice(0, 12).map((v) => `<tr><td>${esc(v)}</td><td class="r">${fmtEur(res.tot[v])}</td></tr>`).join('')}
         ${res.vorder.length > 12 ? `<tr><td colspan="2">… και ${res.vorder.length - 12} ακόμη</td></tr>` : ''}</table>`);
+      const oRows = res.rows.filter((r) => r.q > 0);   // χωρίς τα «ΧΩΡΙΣ ΠΩΛΗΣΕΙΣ» (ποσότητα 0)
       const sd = SEND[o.send];
-      if (sd && sd.email && res.rows.length) {
+      if (sd && sd.email && oRows.length) {
         // e-mail: έτοιμο μήνυμα στο Gmail (δεν στέλνεται αυτόματα — ο χρήστης πατάει «Αποστολή»)
         const now = new Date(), dstr = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
         const subject = `Παραγγελία ${meta.active.name} — ${dstr}`;
-        const lines = res.rows.map((r, i) => `${i + 1}. ${r.nm} — ${fmtInt(r.q)} τεμ.` +
+        const lines = oRows.map((r, i) => `${i + 1}. ${r.nm} — ${fmtInt(r.q)} τεμ.` +
           (r.boxes ? ` (${r.boxes} κιβ. × ${r.pk})` : '') + (r.code ? `   [κωδ. ${r.code}]` : ''));
         const body = `Καλησπέρα σας,\n\nπαρακαλώ την παρακάτω παραγγελία για το κατάστημα ${meta.active.name}:\n\n` +
-          lines.join('\n') + `\n\nΣύνολο: ${res.rows.length} είδη, ${fmtInt(sum((r) => r.q))} τεμάχια.\n\nΕυχαριστώ,\n${meta.active.name}`;
+          lines.join('\n') + `\n\nΣύνολο: ${oRows.length} είδη, ${fmtInt(oRows.reduce((t, r) => t + r.q, 0))} τεμάχια.\n\nΕυχαριστώ,\n${meta.active.name}`;
         const enc = encodeURIComponent;
         // authuser = λογαριασμός Gmail αποστολέα (ανοίγει αυτός, ακόμη κι αν στον Chrome υπάρχουν κι άλλοι)
         const GM = `https://mail.google.com/mail/?authuser=${enc(sd.from || '')}&view=cm&fs=1&to=`;
         let gm = `${GM}${enc(sd.email)}&su=${enc(subject)}&body=${enc(body)}`;
-        if (gm.length > 7500) gm = `${GM}${enc(sd.email)}&su=${enc(subject)}&body=${enc('Καλησπέρα σας,\n\nπαρακαλώ την παραγγελία στο συνημμένο Excel (' + res.rows.length + ' είδη).\n\nΕυχαριστώ,\n' + meta.active.name)}`;
+        if (gm.length > 7500) gm = `${GM}${enc(sd.email)}&su=${enc(subject)}&body=${enc('Καλησπέρα σας,\n\nπαρακαλώ την παραγγελία στο συνημμένο Excel (' + oRows.length + ' είδη).\n\nΕυχαριστώ,\n' + meta.active.name)}`;
         const mt = `mailto:${sd.email}?subject=${enc(subject)}&body=${enc(body.length > 1800 ? 'Η παραγγελία είναι στο συνημμένο Excel.' : body)}`;
         let sentOk = false;
         if (hookUrl()) {
@@ -745,7 +762,7 @@
             if (!j.ok) throw new Error(j.error || 'άγνωστο σφάλμα');
             sentOk = true;
             $id('spo-sending').outerHTML = `<div style="margin-top:10px;padding:12px;border-radius:8px;background:#e8f5e9;font-size:14px">
-              <b>✔ Η παραγγελία στάλθηκε</b> στον ${esc(sd.label)} (${esc(sd.email)}) από ${esc(sd.from || '')} — ${res.rows.length} είδη, με το Excel συνημμένο.
+              <b>✔ Η παραγγελία στάλθηκε</b> στον ${esc(sd.label)} (${esc(sd.email)}) από ${esc(sd.from || '')} — ${oRows.length} είδη, με το Excel συνημμένο.
               <div class="hint">Θα τη βρείτε στα «Απεσταλμένα» του Gmail.</div></div>`;
           } catch (e) {
             $id('spo-sending').outerHTML = `<div style="margin-top:10px;padding:10px;border-radius:8px;background:#fde2e2"><b>Η αυτόματη αποστολή απέτυχε:</b> ${esc(e.message || e)}. Στείλτε την από το Gmail με το παρακάτω κουμπί.</div>`;
@@ -753,7 +770,7 @@
         }
         if (!sentOk) {
         $id('spo-msg').insertAdjacentHTML('beforeend', `<div style="margin-top:10px;padding:10px;border-radius:8px;background:#e8f5e9">
-          <b>E-mail προς ${esc(sd.label)}</b> (${esc(sd.email)}) από ${esc(sd.from || '')}: ${res.rows.length} είδη.<br>
+          <b>E-mail προς ${esc(sd.label)}</b> (${esc(sd.email)}) από ${esc(sd.from || '')}: ${oRows.length} είδη.<br>
           <a href="${gm}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;padding:8px 12px;background:#2e7d32;color:#fff;border-radius:8px;font-weight:bold;text-decoration:none">Άνοιγμα στο Gmail ›</a>
           <a href="${mt}" style="display:inline-block;margin:6px 0 0 6px;padding:8px 12px;background:#1F4E78;color:#fff;border-radius:8px;font-weight:bold;text-decoration:none">Πρόγραμμα e-mail</a>
           <button type="button" id="spo-copymail" style="margin:6px 0 0 6px;padding:8px 12px;border:1px solid #c5ced8;border-radius:8px;background:#fff;cursor:pointer;font-weight:bold">Αντιγραφή κειμένου</button>
@@ -763,16 +780,16 @@
             () => { prompt('Αντιγραφή (Ctrl+C):', t); }); };
         if (win && !win.closed) { try { win.location.href = gm; } catch (e) {} }
         } else if (win && !win.closed) win.close();
-      } else if (sd && !sd.email && res.rows.length) {
+      } else if (sd && !sd.email && oRows.length) {
         // η παραγγελία πάει στο site μέσα στο #hash του συνδέσμου (δεν φεύγει προς κανέναν server)
         const payload = { v: 2, to: o.send, store: meta.active.name, period: `${isoToGr(o.from)}–${isoToGr(o.to)}`,
-          rows: res.rows.map((r) => [r.cd, r.nm, r.q, r.pk || 0, r.boxes == null ? 0 : r.boxes,
+          rows: oRows.map((r) => [r.cd, r.nm, r.q, r.pk || 0, r.boxes == null ? 0 : r.boxes,
             ((r.scl || []).find((c) => c[0] === sd.vid) || [])[1] || '', (r.bcs || []).join(',')]) };
         // base64url: μόνο γράμματα/αριθμοί/-/_ ώστε κανένα site να μην «χαλάει» τον σύνδεσμο
         const b64u = btoa(unescape(encodeURIComponent(JSON.stringify(payload)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
         const url = sd.url + '#spo=' + b64u;
         $id('spo-msg').insertAdjacentHTML('beforeend', `<div style="margin-top:10px;padding:10px;border-radius:8px;background:#e8f5e9">
-          <b>Καταχώρηση στον/στην ${esc(sd.label)}:</b> ${res.rows.length} είδη.<br>
+          <b>Καταχώρηση στον/στην ${esc(sd.label)}:</b> ${oRows.length} είδη.<br>
           <a href="${url}" target="_blank" rel="noopener" style="display:inline-block;margin-top:6px;padding:8px 12px;background:#2e7d32;color:#fff;border-radius:8px;font-weight:bold;text-decoration:none">Άνοιγμα ${esc(sd.label)} ›</a>
           <div class="hint">Στο site που ανοίγει πατήστε ξανά τον σελιδοδείκτη «📦 Παραγγελίες».</div></div>`);
         if (win && !win.closed) { try { win.location.href = url; } catch (e) {} }
